@@ -1,0 +1,6 @@
+{
+  "name": "ACEDEP - Associação Cultural Especial Paradesportiva Paulista",
+  "description": "Página institucional da ACEDEP (fundada em 1990), promovendo a inclusão e o alto rendimento através da Natação para atletas com deficiência intelectual no Centro Paralímpico Brasileiro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permitir leitura pública de todas as fotos do site da ACEDEP
+    match /site_photos/{photoId} {
+      allow read, write: if true;
+    }
+    
+    // Galeria de fotos da ACEDEP
+    match /gallery/{photoId} {
+      allow read, write: if true;
+    }
+    
+    // Configurações do painel administrativo
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    // Mural de notícias e artigos da comunidade de natação paralímpica
+    match /news_posts/{postId} {
+      allow read, write: if true;
+    }
+
+    // Mural de recados e apoio da torcida / comunidade
+    match /community_cheers/{cheerId} {
+      allow read, write: if true;
+    }
+
+    // Atletas e fichas individuais do portal do responsável
+    match /athletes/{athleteId} {
+      allow read, write: if true;
+    }
+
+    // Contas de acesso dos responsáveis
+    match /guardian_accounts/{accountId} {
+      allow read, write: if true;
+    }
+
+    // Mensagens e comunicados diretos aos responsáveis
+    match /athlete_messages/{messageId} {
+      allow read, write: if true;
+    }
+
+    // Histórico de disparos de e-mail e notificações
+    match /email_notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    // Sessões de chamada de presença de treinos e competições
+    match /attendance_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    // Eventos e competições do calendário oficial
+    match /annual_events/{eventId} {
+      allow read, write: if true;
+    }
+
+    // Usuários administrativos e equipe técnica
+    match /admin_users/{userId} {
+      allow read, write: if true;
+    }
+  }
+}
