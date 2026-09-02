@@ -41,7 +41,9 @@ import {
   Phone,
   Trophy,
   Award,
-  FileDown
+  FileDown,
+  Activity,
+  Wifi
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { usePhotos, DEFAULT_PHOTOS, GalleryPhotoItem } from '../context/PhotosContext';
@@ -50,6 +52,8 @@ import { AttendanceManagerTab } from './admin/AttendanceManagerTab';
 import { AdminUsersManagerTab } from './admin/AdminUsersManagerTab';
 import { AthleteDocumentsTab } from './AthleteDocumentsTab';
 import { ExportReportModal, ReportType } from './ExportReportModal';
+import { SyncDiagnosticCard } from './SyncDiagnosticCard';
+import { SyncDiagnosticModal } from './SyncDiagnosticModal';
 import { 
   groupAndRankMetrics, 
   STROKE_OPTIONS, 
@@ -124,7 +128,8 @@ export const AdminCoachPortalModal: React.FC = () => {
   const isSuperAdmin = currentAdminProfile?.email === 'giuli.pereira@gmail.com' || currentAdminProfile?.role === 'Super Admin';
   const isProfessor = currentAdminProfile?.role === 'Professor' || currentAdminProfile?.role === 'Treinador' || currentAdminProfile?.role === 'Técnico de Natação' || (currentAdminProfile && !isSuperAdmin);
 
-  const [activeTab, setActiveTab] = useState<'atletas' | 'presenca' | 'tempos' | 'agenda' | 'recados' | 'mural_familia' | 'emails' | 'administradores' | 'fotos' | 'galeria' | 'noticias' | 'seguranca'>('atletas');
+  const [activeTab, setActiveTab] = useState<'atletas' | 'presenca' | 'tempos' | 'agenda' | 'recados' | 'mural_familia' | 'emails' | 'administradores' | 'fotos' | 'galeria' | 'noticias' | 'seguranca' | 'diagnostico'>('atletas');
+  const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   // Export report modal state
   const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -1011,6 +1016,16 @@ export const AdminCoachPortalModal: React.FC = () => {
               <>
                 <button
                   type="button"
+                  onClick={() => setDiagnosticModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                  title="Diagnóstico de sincronização em tempo real do Firestore e Storage"
+                >
+                  <Activity className="w-3.5 h-3.5 text-[#d4af37] animate-pulse" />
+                  <span className="hidden sm:inline">Diagnóstico Nuvem</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     setExportModalInitialType(
                       activeTab === 'presenca' ? 'attendance_monthly' :
@@ -1188,6 +1203,19 @@ export const AdminCoachPortalModal: React.FC = () => {
                 >
                   <Heart className="w-3.5 h-3.5" />
                   <span>Mural da Família ({cheers.length})</span>
+                </button>
+
+                {/* Diagnóstico & Sincronização (Professor & Admin) */}
+                <button
+                  onClick={() => setActiveTab('diagnostico')}
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'diagnostico'
+                      ? 'bg-[#d4af37] text-[#060e1c] shadow'
+                      : 'text-slate-300 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Diagnóstico Nuvem</span>
                 </button>
 
                 {/* Super Admin ONLY Tabs */}
@@ -4173,6 +4201,62 @@ export const AdminCoachPortalModal: React.FC = () => {
             </div>
           )}
 
+          {/* TAB: DIAGNÓSTICO & SINCRONIZAÇÃO */}
+          {activeTab === 'diagnostico' && (
+            <div className="space-y-6">
+              <SyncDiagnosticCard onOpenFullDiagnostic={() => setDiagnosticModalOpen(true)} />
+
+              <div className="p-5 rounded-3xl bg-[#0a182e] border border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-base font-bold font-serif text-[#f3e5ab]">
+                      Central de Diagnóstico & Saúde da Nuvem
+                    </h4>
+                    <p className="text-xs text-slate-400">
+                      Inspecione o status de leitura/gravação do banco Firestore e o armazenamento em tempo real.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setDiagnosticModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all shadow flex items-center gap-2 cursor-pointer active:scale-95"
+                  >
+                    <Activity className="w-4 h-4" />
+                    <span>Abrir Diagnóstico Completo</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+                  <div className="p-3.5 rounded-2xl bg-[#06101e] border border-white/5 space-y-1.5">
+                    <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider block">
+                      ⚡ Sincronização Instantânea
+                    </span>
+                    <p className="text-slate-300 text-[11px] leading-relaxed">
+                      Qualquer edição em atletas, presenças ou fotos é propagada na mesma fração de segundo para todos os dispositivos conectados.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#06101e] border border-white/5 space-y-1.5">
+                    <span className="text-[11px] font-bold text-sky-400 uppercase tracking-wider block">
+                      🛡️ Tolerância Offline
+                    </span>
+                    <p className="text-slate-300 text-[11px] leading-relaxed">
+                      Se a conexão cair na beira da piscina, os dados ficam no cache local e são transmitidos automaticamente ao reconectar.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#06101e] border border-white/5 space-y-1.5">
+                    <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block">
+                      🗜️ Otimização de Fotos
+                    </span>
+                    <p className="text-slate-300 text-[11px] leading-relaxed">
+                      Fotos são comprimidas para WebP antes do envio, economizando dados móveis e tempo de carregamento.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
         </>
         )}
@@ -4614,6 +4698,12 @@ export const AdminCoachPortalModal: React.FC = () => {
           attendanceSessions={attendanceSessions}
           initialReportType={exportModalInitialType}
           initialAthleteId={exportModalAthleteId}
+        />
+
+        {/* Global Sync Diagnostic Modal */}
+        <SyncDiagnosticModal
+          isOpen={diagnosticModalOpen}
+          onClose={() => setDiagnosticModalOpen(false)}
         />
 
       </div>

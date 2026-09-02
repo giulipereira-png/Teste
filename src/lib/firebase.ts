@@ -12,6 +12,7 @@ import {
   collection, 
   query, 
   orderBy,
+  getDocs,
   getDocFromServer
 } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -96,5 +97,5 @@ export async function testConnection() {
 
 testConnection();
 
-export { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, collection, query, orderBy };
+export { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, collection, query, orderBy, getDocs, getDocFromServer };
 
