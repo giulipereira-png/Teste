@@ -9,6 +9,7 @@ import {
   Waves, 
   Plus, 
   Trash2, 
+  Edit2, 
   Search, 
   Percent, 
   Check, 
@@ -55,7 +56,9 @@ export const AttendanceManagerTab: React.FC = () => {
     setAthleteDayPresence,
     batchSetAthleteMonthAttendance,
     annualEvents,
-    addAnnualEvent
+    addAnnualEvent,
+    updateAnnualEvent,
+    deleteAnnualEvent
   } = useCommunity();
 
   // Tab View Mode: 'calendar' (Ficha Mensal por Atleta), 'matrix' (Grade Geral de Treinos), 'championships_matrix' (Grade Geral de Campeonatos), 'sessions' (Histórico de Sessões)
@@ -79,6 +82,126 @@ export const AttendanceManagerTab: React.FC = () => {
     time: '',
     text: '',
   });
+
+  // Dynamic Championship Management State
+  const [champModalOpen, setChampModalOpen] = useState(false);
+  const [editingChamp, setEditingChamp] = useState<{ id: string; title: string; date: string; location: string; sessionId?: string; eventId?: string; notes?: string } | null>(null);
+  const [champFormTitle, setChampFormTitle] = useState('');
+  const [champFormDate, setChampFormDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [champFormLocation, setChampFormLocation] = useState('Centro Paralímpico Brasileiro (CPB) - SP');
+  const [champFormNotes, setChampFormNotes] = useState('');
+  const [isSavingChamp, setIsSavingChamp] = useState(false);
+  const [confirmDeleteChamp, setConfirmDeleteChamp] = useState<{ id: string; title: string; date?: string; sessionId?: string; eventId?: string } | null>(null);
+
+  const handleOpenAddChampModal = () => {
+    setEditingChamp(null);
+    setChampFormTitle('');
+    setChampFormDate(new Date().toISOString().split('T')[0]);
+    setChampFormLocation('Centro Paralímpico Brasileiro (CPB) - SP');
+    setChampFormNotes('');
+    setChampModalOpen(true);
+  };
+
+  const handleOpenEditChampModal = (champ: { id: string; title: string; date: string; location: string; sessionId?: string; eventId?: string; notes?: string }) => {
+    setEditingChamp(champ);
+    setChampFormTitle(champ.title);
+    let dateVal = champ.date;
+    if (dateVal && dateVal.includes('/')) {
+      const parts = dateVal.split('/');
+      if (parts.length === 3) {
+        dateVal = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+    }
+    setChampFormDate(dateVal || new Date().toISOString().split('T')[0]);
+    setChampFormLocation(champ.location || 'Centro Paralímpico Brasileiro (CPB) - SP');
+    setChampFormNotes(champ.notes || '');
+    setChampModalOpen(true);
+  };
+
+  const handleSaveChampionship = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!champFormTitle.trim()) return;
+
+    setIsSavingChamp(true);
+    try {
+      let displayDate = champFormDate;
+      if (champFormDate && champFormDate.includes('-')) {
+        const parts = champFormDate.split('-');
+        if (parts.length === 3) {
+          displayDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+      }
+
+      if (editingChamp) {
+        if (editingChamp.sessionId) {
+          await updateAttendanceSession(editingChamp.sessionId, {
+            title: champFormTitle.trim(),
+            date: displayDate,
+            location: champFormLocation.trim(),
+            notes: champFormNotes.trim() || undefined,
+          });
+        } else if (editingChamp.id) {
+          await updateAttendanceSession(editingChamp.id, {
+            title: champFormTitle.trim(),
+            date: displayDate,
+            location: champFormLocation.trim(),
+            notes: champFormNotes.trim() || undefined,
+          });
+        }
+
+        if (editingChamp.eventId) {
+          await updateAnnualEvent(editingChamp.eventId, {
+            title: champFormTitle.trim(),
+            date: displayDate,
+            location: champFormLocation.trim(),
+          });
+        }
+        triggerAutoSaveFeedback(`Campeonato "${champFormTitle.trim()}" atualizado!`);
+      } else {
+        const newSessionId = `camp-${Date.now()}`;
+        const newSession: AttendanceSession = {
+          id: newSessionId,
+          title: champFormTitle.trim(),
+          type: 'campeonato',
+          date: displayDate,
+          location: champFormLocation.trim(),
+          notes: champFormNotes.trim() || 'Campeonato Oficial ACEDEP',
+          createdAt: new Date().toISOString(),
+          records: [],
+          presentAthleteIds: [],
+          totalAthletesCount: athletes.length,
+        };
+        await addAttendanceSession(newSession);
+        triggerAutoSaveFeedback(`Campeonato "${champFormTitle.trim()}" adicionado à chamada!`);
+      }
+
+      setChampModalOpen(false);
+      setEditingChamp(null);
+    } catch (err) {
+      console.error('Erro ao salvar campeonato:', err);
+    } finally {
+      setIsSavingChamp(false);
+    }
+  };
+
+  const handleDeleteChampionship = async (champ: { id: string; title: string; sessionId?: string; eventId?: string }) => {
+    try {
+      if (champ.sessionId) {
+        await deleteAttendanceSession(champ.sessionId);
+      }
+      if (champ.id && champ.id !== champ.sessionId) {
+        await deleteAttendanceSession(champ.id);
+      }
+      if (champ.eventId) {
+        await deleteAnnualEvent(champ.eventId);
+      }
+      triggerAutoSaveFeedback(`Campeonato "${champ.title}" removido.`);
+    } catch (err) {
+      console.error('Erro ao remover campeonato:', err);
+    } finally {
+      setConfirmDeleteChamp(null);
+    }
+  };
 
   // Sessions Tab Filter
   const [activeFilter, setActiveFilter] = useState<'all' | 'treino' | 'campeonato'>('all');
@@ -944,7 +1067,7 @@ export const AttendanceManagerTab: React.FC = () => {
       {/* ========================================================================= */}
       {viewMode === 'championships_matrix' && (
         <div className="p-6 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] shadow-xl space-y-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1e3a5f] pb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[#1e3a5f] pb-4">
             <div>
               <div className="flex items-center gap-2">
                 <span className="p-1.5 rounded-lg bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40">
@@ -955,30 +1078,42 @@ export const AttendanceManagerTab: React.FC = () => {
                 </h4>
               </div>
               <p className="text-xs text-slate-300 mt-1">
-                Visão geral completa com todos os atletas da ACEDEP e todos os campeonatos do ano. Clique em qualquer célula para alternar o status ou registrar medalhas.
+                Cadastre e gerencie livremente as competições da ACEDEP. Clique em qualquer célula de atleta para alternar presenças e medalhas.
               </p>
             </div>
 
-            {/* Quick Status Legend */}
-            <div className="flex flex-wrap items-center gap-2 text-[11px] bg-black/40 p-2 rounded-xl border border-white/5">
-              <span className="flex items-center gap-1 text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30">
-                <span>✓</span> Presente / Disputou
-              </span>
-              <span className="flex items-center gap-1 text-amber-300 font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30">
-                <span>🥇</span> Ouro
-              </span>
-              <span className="flex items-center gap-1 text-slate-300 font-bold px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-400/30">
-                <span>🥈</span> Prata
-              </span>
-              <span className="flex items-center gap-1 text-amber-600 font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-700/30">
-                <span>🥉</span> Bronze
-              </span>
-              <span className="flex items-center gap-1 text-amber-400 font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30">
-                <span>!</span> Justificada
-              </span>
-              <span className="flex items-center gap-1 text-red-400 font-bold px-1.5 py-0.5 rounded bg-red-950/60 border border-red-500/30">
-                <span>✕</span> Falta
-              </span>
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* Add Championship Button */}
+              <button
+                type="button"
+                onClick={handleOpenAddChampModal}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Adicionar Campeonato</span>
+              </button>
+
+              {/* Quick Status Legend */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] bg-black/40 p-1.5 rounded-xl border border-white/5">
+                <span className="flex items-center gap-1 text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/30">
+                  <span>✓</span> Presente
+                </span>
+                <span className="flex items-center gap-1 text-amber-300 font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30">
+                  <span>🥇</span> Ouro
+                </span>
+                <span className="flex items-center gap-1 text-slate-300 font-bold px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-400/30">
+                  <span>🥈</span> Prata
+                </span>
+                <span className="flex items-center gap-1 text-amber-600 font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-700/30">
+                  <span>🥉</span> Bronze
+                </span>
+                <span className="flex items-center gap-1 text-amber-400 font-bold px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30">
+                  <span>!</span> Justif.
+                </span>
+                <span className="flex items-center gap-1 text-red-400 font-bold px-1.5 py-0.5 rounded bg-red-950/60 border border-red-500/30">
+                  <span>✕</span> Falta
+                </span>
+              </div>
             </div>
           </div>
 
@@ -994,15 +1129,16 @@ export const AttendanceManagerTab: React.FC = () => {
             );
 
             // Combine unique list
-            const unifiedChamps: { id: string; title: string; date: string; location: string; sessionId?: string; eventId?: string }[] = [];
+            const unifiedChamps: { id: string; title: string; date: string; location: string; sessionId?: string; eventId?: string; notes?: string }[] = [];
 
             existingChampSessions.forEach((sess) => {
               unifiedChamps.push({
                 id: sess.id,
                 title: sess.title,
                 date: sess.date,
-                location: sess.location || 'Centro Paralímpico Brasileiro',
+                location: sess.location || 'Centro Paralímpico Brasileiro (CPB)',
                 sessionId: sess.id,
+                notes: sess.notes,
               });
             });
 
@@ -1022,12 +1158,28 @@ export const AttendanceManagerTab: React.FC = () => {
               }
             });
 
-            // If empty, provide placeholder demo championships
+            // If empty, show clean empty state instead of hardcoded demo championships
             if (unifiedChamps.length === 0) {
-              unifiedChamps.push(
-                { id: 'c1', title: 'Paulista FAP - 1ª Etapa', date: '21/03/2026', location: 'CPB - SP' },
-                { id: 'c2', title: 'Troféu Brasil Paralímpico', date: '18/04/2026', location: 'CPB - SP' },
-                { id: 'c3', title: 'Circuito Caixa Regional', date: '23/05/2026', location: 'São Paulo' }
+              return (
+                <div className="py-14 px-6 text-center rounded-2xl bg-[#081528] border border-[#1e3a5f] border-dashed space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#d4af37] flex items-center justify-center mx-auto shadow-lg">
+                    <Trophy className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h4 className="text-base font-bold text-white">Nenhum campeonato cadastrado ainda</h4>
+                    <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                      Adicione os campeonatos e competições da ACEDEP para acompanhar presenças, convocações e medalhas de cada atleta.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenAddChampModal}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>+ Cadastrar Primeiro Campeonato</span>
+                  </button>
+                </div>
               );
             }
 
@@ -1156,16 +1308,45 @@ export const AttendanceManagerTab: React.FC = () => {
                       {unifiedChamps.map((champ) => (
                         <th
                           key={champ.id}
-                          className="p-2.5 text-center min-w-[140px] font-bold border-l border-white/5 text-[#f3e5ab]"
+                          className="p-2.5 text-center min-w-[170px] font-bold border-l border-white/5 text-[#f3e5ab] relative group bg-[#071326]"
                         >
-                          <div className="text-[11px] font-bold text-white leading-tight line-clamp-2">
+                          <div className="flex items-center justify-between gap-1 mb-1.5">
+                            <span className="text-[10px] text-[#d4af37] font-semibold bg-[#d4af37]/15 px-2 py-0.5 rounded border border-[#d4af37]/30 truncate">
+                              {champ.date}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEditChampModal(champ);
+                                }}
+                                className="p-1 rounded bg-white/10 hover:bg-[#d4af37] text-slate-300 hover:text-[#060e1c] transition-colors cursor-pointer"
+                                title="Editar nome, data ou local deste campeonato"
+                                aria-label="Editar campeonato"
+                              >
+                                <Edit2 className="w-3 h-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDeleteChamp(champ);
+                                }}
+                                className="p-1 rounded bg-white/10 hover:bg-red-500 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                title="Excluir este campeonato da lista de chamada"
+                                aria-label="Excluir campeonato"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="text-[11px] font-bold text-white leading-tight line-clamp-2" title={champ.title}>
                             {champ.title}
                           </div>
-                          <div className="text-[9px] text-[#d4af37] font-semibold mt-0.5">
-                            {champ.date}
-                          </div>
-                          <div className="text-[8px] text-slate-400 truncate max-w-[120px] mx-auto">
-                            {champ.location}
+                          <div className="text-[9px] text-slate-400 truncate max-w-[150px] mx-auto mt-1 flex items-center justify-center gap-1">
+                            <MapPin className="w-2.5 h-2.5 text-[#d4af37] shrink-0" />
+                            <span className="truncate">{champ.location}</span>
                           </div>
                         </th>
                       ))}
@@ -1681,6 +1862,159 @@ export const AttendanceManagerTab: React.FC = () => {
         initialYear={selectedYear}
         initialAthleteId={selectedAthleteId}
       />
+
+      {/* Championship Add / Edit Modal */}
+      {champModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-lg rounded-2xl bg-[#0a192f] border border-[#1e3a5f] shadow-2xl p-6 text-white space-y-5">
+            <div className="flex items-center justify-between border-b border-[#1e3a5f] pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] flex items-center justify-center">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold font-serif text-white">
+                    {editingChamp ? 'Editar Campeonato / Competição' : 'Novo Campeonato para Chamada'}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    {editingChamp ? 'Atualize as informações do campeonato' : 'Adicione uma nova competição à tabela da chamada'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setChampModalOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveChampionship} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                  Nome da Competição / Torneio *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={champFormTitle}
+                  onChange={(e) => setChampFormTitle(e.target.value)}
+                  placeholder="Ex: Paulista FAP - 1ª Etapa ou Troféu Brasil Paralímpico"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#071326] border border-[#1e3a5f] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                    Data da Competição *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={champFormDate}
+                    onChange={(e) => setChampFormDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl bg-[#071326] border border-[#1e3a5f] text-white text-xs focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                    Local / Sede
+                  </label>
+                  <input
+                    type="text"
+                    value={champFormLocation}
+                    onChange={(e) => setChampFormLocation(e.target.value)}
+                    placeholder="Ex: CPB - São Paulo"
+                    className="w-full px-3 py-2 rounded-xl bg-[#071326] border border-[#1e3a5f] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-200 mb-1.5">
+                  Observações / Provas (Opcional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={champFormNotes}
+                  onChange={(e) => setChampFormNotes(e.target.value)}
+                  placeholder="Ex: Provas de 50m e 100m Livre, S14..."
+                  className="w-full px-3 py-2 rounded-xl bg-[#071326] border border-[#1e3a5f] text-white text-xs placeholder:text-slate-500 focus:outline-none focus:border-[#d4af37] resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-[#1e3a5f]">
+                <button
+                  type="button"
+                  onClick={() => setChampModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingChamp || !champFormTitle.trim()}
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all shadow-md active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  {isSavingChamp ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-[#060e1c] border-t-transparent rounded-full animate-spin" />
+                      <span>Salvando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>{editingChamp ? 'Atualizar Campeonato' : 'Salvar e Adicionar à Chamada'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Championship Delete Confirmation Modal */}
+      {confirmDeleteChamp && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="relative w-full max-w-md rounded-2xl bg-[#0a192f] border border-red-500/40 shadow-2xl p-6 text-white space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-white">
+                  Excluir Campeonato da Chamada?
+                </h3>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Tem certeza que deseja remover o campeonato <span className="font-bold text-[#d4af37]">"{confirmDeleteChamp.title}"</span>? Esta ação removerá a coluna correspondente na tabela da chamada de competições.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-[#1e3a5f]">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteChamp(null)}
+                className="px-4 py-2 rounded-xl border border-white/10 hover:bg-white/5 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteChampionship(confirmDeleteChamp)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Sim, Excluir</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

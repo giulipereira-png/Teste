@@ -203,19 +203,11 @@ export const AboutPage: React.FC<AboutPageProps> = ({
                   <ChevronRight className="w-5 h-5" />
                 </button>
 
-                {/* Bottom Caption Overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-[#060e1c] via-[#060e1c]/80 to-transparent">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#d4af37] bg-[#d4af37]/10 px-2 py-0.5 rounded border border-[#d4af37]/30">
-                      Registro {currentSlide + 1} de {carouselItems.length}
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
-                    {activePhoto.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-300 mt-1 font-light leading-relaxed">
-                    {activePhoto.caption}
-                  </p>
+                {/* Slide Number Badge only - without caption text */}
+                <div className="absolute bottom-4 right-4 z-10">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#d4af37] bg-black/70 px-2.5 py-1 rounded-full border border-white/10 backdrop-blur-md">
+                    Foto {currentSlide + 1} de {carouselItems.length}
+                  </span>
                 </div>
               </div>
 

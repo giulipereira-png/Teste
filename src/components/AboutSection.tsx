@@ -164,29 +164,21 @@ export const AboutSection: React.FC = () => {
                   <ChevronRight className="w-5 h-5" />
                 </button>
 
-                {/* Bottom Caption & Indicators */}
-                <div className="absolute bottom-3 left-3 right-3 px-3.5 py-2.5 rounded-xl bg-black/80 border border-white/10 backdrop-blur-md z-10">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="text-xs font-bold text-[#f3e5ab] truncate">
-                      {activePhoto.title}
-                    </span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {carouselItems.map((_, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setCurrentSlide(idx)}
-                          className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                            idx === currentSlide ? 'w-5 bg-[#d4af37]' : 'w-2 bg-white/40 hover:bg-white/70'
-                          }`}
-                          aria-label={`Foto ${idx + 1}`}
-                        />
-                      ))}
-                    </div>
+                {/* Clean Slide Indicators without caption text */}
+                <div className="absolute bottom-3.5 left-0 right-0 flex items-center justify-center z-10 pointer-events-none">
+                  <div className="px-3 py-1.5 rounded-full bg-black/70 border border-white/10 backdrop-blur-md flex items-center gap-1.5 pointer-events-auto shadow-lg">
+                    {carouselItems.map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setCurrentSlide(idx)}
+                        className={`h-1.5 rounded-full transition-all cursor-pointer ${
+                          idx === currentSlide ? 'w-6 bg-[#d4af37]' : 'w-2 bg-white/40 hover:bg-white/70'
+                        }`}
+                        aria-label={`Foto ${idx + 1}`}
+                      />
+                    ))}
                   </div>
-                  <p className="text-[11px] text-slate-200/90 leading-relaxed font-light">
-                    {activePhoto.caption}
-                  </p>
                 </div>
               </div>
             </div>

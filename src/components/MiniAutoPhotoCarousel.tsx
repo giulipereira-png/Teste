@@ -16,37 +16,37 @@ export const MiniAutoPhotoCarousel: React.FC<MiniAutoPhotoCarouselProps> = ({ on
   const carouselItems = [
     {
       id: 'carousel_1',
-      title: 'Equipe ACEDEP',
+      title: 'Carrossel Foto 1',
       url: photos['carousel_1'] || '/IMG_4378.jpeg',
       fallbacks: ['/IMG_4378.jpeg', 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?auto=format&fit=crop&w=600&q=80'],
     },
     {
       id: 'carousel_2',
-      title: 'Treinos Técnicos CPB',
+      title: 'Carrossel Foto 2',
       url: photos['carousel_2'] || 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=600&q=80',
       fallbacks: ['https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=600&q=80', '/IMG_4378.jpeg'],
     },
     {
       id: 'carousel_3',
-      title: 'Premiações & Pódios',
+      title: 'Carrossel Foto 3',
       url: photos['carousel_3'] || 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?auto=format&fit=crop&w=600&q=80',
       fallbacks: ['https://images.unsplash.com/photo-1519315901367-f34ff9154487?auto=format&fit=crop&w=600&q=80', '/IMG_4378.jpeg'],
     },
     {
       id: 'carousel_4',
-      title: 'Piscina Olímpica 50m',
+      title: 'Carrossel Foto 4',
       url: photos['carousel_4'] || 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=600&q=80',
       fallbacks: ['https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=600&q=80', '/IMG_4378.jpeg'],
     },
     {
       id: 'carousel_5',
-      title: 'Superação & Inclusão',
+      title: 'Carrossel Foto 5',
       url: photos['carousel_5'] || 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?auto=format&fit=crop&w=600&q=80',
       fallbacks: ['https://images.unsplash.com/photo-1519315901367-f34ff9154487?auto=format&fit=crop&w=600&q=80', '/IMG_4378.jpeg'],
     },
     {
       id: 'carousel_6',
-      title: 'Espírito Esportivo',
+      title: 'Carrossel Foto 6',
       url: photos['carousel_6'] || '/IMG_4378.jpeg',
       fallbacks: ['/IMG_4378.jpeg', 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=600&q=80'],
     },
@@ -175,13 +175,11 @@ export const MiniAutoPhotoCarousel: React.FC<MiniAutoPhotoCarouselProps> = ({ on
               }}
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent opacity-80 group-hover:opacity-95 transition-opacity" />
-
-            <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-white truncate drop-shadow-sm">
-                {item.title}
+            {/* Subtle hover feedback with eye icon only - no text captions */}
+            <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-end p-2.5">
+              <span className="p-1 rounded-md bg-black/60 text-[#d4af37] backdrop-blur-xs">
+                <Eye className="w-3.5 h-3.5" />
               </span>
-              <Eye className="w-3.5 h-3.5 text-[#d4af37] opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
             </div>
           </div>
         ))}
@@ -199,14 +197,13 @@ export const MiniAutoPhotoCarousel: React.FC<MiniAutoPhotoCarouselProps> = ({ on
           >
             <img 
               src={selectedImage.url} 
-              alt={selectedImage.title} 
-              className="w-full max-h-[70vh] object-contain rounded-xl"
+              alt="Foto ACEDEP" 
+              className="w-full max-h-[75vh] object-contain rounded-xl"
             />
-            <div className="p-3 flex items-center justify-between">
-              <span className="text-sm font-bold text-white">{selectedImage.title}</span>
+            <div className="p-3 flex items-center justify-end">
               <button
                 onClick={() => setSelectedImage(null)}
-                className="px-3 py-1 rounded bg-[#d4af37] text-[#060e1c] text-xs font-bold hover:bg-[#b8952b] transition-colors cursor-pointer"
+                className="px-4 py-1.5 rounded-lg bg-[#d4af37] text-[#060e1c] text-xs font-bold hover:bg-[#b8952b] transition-colors cursor-pointer shadow"
               >
                 Fechar
               </button>
