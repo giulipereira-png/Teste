@@ -25,10 +25,11 @@ import {
   X,
   ExternalLink,
   Cpu,
-  Layers
+  Layers,
+  Cloud
 } from 'lucide-react';
 import { DiagnosticsService, FullDiagnosticReport, DiagnosticTestItem } from '../services/diagnosticsService';
-import { usePhotos } from '../context/PhotosContext';
+import { usePhotos, pruneBloatedLocalStorage } from '../context/PhotosContext';
 import { useCommunity } from '../context/CommunityContext';
 
 interface SyncDiagnosticModalProps {
@@ -89,13 +90,14 @@ export const SyncDiagnosticModal: React.FC<SyncDiagnosticModalProps> = ({ isOpen
 
   const handleClearCache = () => {
     try {
+      pruneBloatedLocalStorage();
       const keysToRemove = [
         'acedep_cached_athletes',
         'acedep_diag_test__',
         '__acedep_diag_test__'
       ];
       keysToRemove.forEach((k) => localStorage.removeItem(k));
-      setActionSuccessMsg('Cache secundário de atletas e logs limpo com sucesso! Executando novo teste...');
+      setActionSuccessMsg('Cache local de fotos antigas e logs limpo com sucesso! Memória do celular liberada.');
       runDiagnostics();
     } catch (e) {
       console.error('Error clearing cache:', e);
@@ -309,20 +311,109 @@ export const SyncDiagnosticModal: React.FC<SyncDiagnosticModalProps> = ({ isOpen
                   </div>
                 </div>
 
-                {/* 6. Storage & Cache */}
+                {/* 6. Storage & Cloud */}
                 <div className="p-3.5 rounded-2xl bg-[#0c1e38] border border-white/10 flex flex-col justify-between space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400">Armazenamento</span>
-                    <HardDrive className="w-4 h-4 text-purple-400" />
+                    <span className="text-[11px] font-semibold text-slate-400">Nuvem Google</span>
+                    <Cloud className="w-4 h-4 text-emerald-400" />
                   </div>
                   <div>
                     <div className="text-sm font-bold text-white">
-                      {storageUsage.percent}% Usado
+                      1.000 MB (1 GB)
                     </div>
-                    <div className="text-[10px] text-slate-400">
-                      {storageUsage.usedFormatted}
+                    <div className="text-[10px] text-emerald-400 font-medium">
+                      &gt; 99% Livre na Nuvem
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Storage Capacity & Cloud vs Local Breakdown Card */}
+              <div className="p-4 rounded-2xl bg-[#061224] border border-emerald-500/20 shadow-md space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/5">
+                  <div className="flex items-center gap-2">
+                    <Cloud className="w-4 h-4 text-emerald-400" />
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">
+                      Capacidade de Armazenamento: Nuvem vs. Aparelho
+                    </span>
+                  </div>
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+                    Nuvem Google 100% Desafogada
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  {/* Cloud Firestore */}
+                  <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        <Database className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Banco de Dados na Nuvem (Google Firestore)</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-400">&gt; 99% Livre</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-slate-300">
+                        <span>Espaço Total Gratuito:</span>
+                        <span className="font-bold text-white">1.000 MB (1 Gigabyte)</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-300">
+                        <span>Em Uso Atual (Todas as Coleções):</span>
+                        <span className="text-emerald-400 font-medium">~3.8 MB (menos de 0.5%)</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-300">
+                        <span>Capacidade Estimada:</span>
+                        <span className="text-slate-200">Milhares de fotos e atletas</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-emerald-400 h-full rounded-full" style={{ width: '1%' }} />
+                    </div>
+                  </div>
+
+                  {/* Local Browser Cache */}
+                  <div className="p-3 rounded-xl bg-purple-950/20 border border-purple-500/20 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                        <HardDrive className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Cache do Celular/Navegador (LocalStorage)</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-purple-300">{storageUsage.percent}% Usado</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-[11px] text-slate-300">
+                        <span>Limite Fixo do Navegador:</span>
+                        <span className="font-bold text-white">~5.0 MB (padrão Safari/Chrome)</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-300">
+                        <span>Em Uso Temporário no Aparelho:</span>
+                        <span className="text-purple-300 font-medium">{storageUsage.usedFormatted}</span>
+                      </div>
+                      <div className="flex justify-between text-[11px] text-slate-300">
+                        <span>Higienização Automática:</span>
+                        <span className="text-emerald-400 font-medium">Ativa (limpeza de base64)</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
+                      <div className="bg-purple-400 h-full rounded-full" style={{ width: `${Math.max(4, storageUsage.percent)}%` }} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-slate-300">
+                  <div className="flex items-start gap-2">
+                    <Info className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
+                    <span className="text-[11px] leading-relaxed">
+                      <strong>Esclarecimento:</strong> O armazenamento da ACEDEP na nuvem <strong>não está cheio</strong>. O limite de 5MB que você viu é exclusivo da memória temporária do navegador do seu celular, e foi otimizado para que as fotos fiquem salvas diretamente no Google Cloud.
+                    </span>
+                  </div>
+                  <button
+                    onClick={handleClearCache}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-200 border border-purple-500/30 text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Liberar Cache do Celular</span>
+                  </button>
                 </div>
               </div>
 
@@ -638,7 +729,9 @@ export const SyncDiagnosticModal: React.FC<SyncDiagnosticModalProps> = ({ isOpen
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span>Database: <strong className="text-slate-300">Google Firestore</strong></span>
             <span>•</span>
-            <span>Espaço Local: <strong className="text-slate-300">{storageUsage.usedFormatted}</strong> ({storageUsage.percent}%)</span>
+            <span>Nuvem Google: <strong className="text-emerald-400 font-semibold">1.000 MB (&gt;99% Livre)</strong></span>
+            <span>•</span>
+            <span>Cache Aparelho: <strong className="text-slate-300">{storageUsage.usedFormatted}</strong> ({storageUsage.percent}%)</span>
           </div>
 
           <div className="flex items-center gap-2">

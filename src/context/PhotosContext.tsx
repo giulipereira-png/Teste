@@ -178,13 +178,52 @@ interface PhotosContextType {
 
 const PhotosContext = createContext<PhotosContextType | undefined>(undefined);
 
+/**
+ * Prunes oversized base64 images and temporary testing data from localStorage
+ * to ensure the browser's 5MB cache remains clean and under 5% utilization.
+ */
+export const pruneBloatedLocalStorage = (): number => {
+  let freedCount = 0;
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      // Remove any photo caches that are base64 or oversized (> 2KB)
+      if (key.startsWith('acedep_photo_')) {
+        const val = localStorage.getItem(key);
+        if (val && (val.startsWith('data:image/') || val.length > 2000)) {
+          keysToRemove.push(key);
+        }
+      }
+      if (key.startsWith('acedep_diag_') || key.startsWith('__acedep_')) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => {
+      localStorage.removeItem(k);
+      freedCount++;
+    });
+  } catch (e) {
+    console.warn('LocalStorage pruning exception:', e);
+  }
+  return freedCount;
+};
+
 export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [photos, setPhotos] = useState<Record<string, string>>(() => {
+    // Run pruning immediately on mount to clear legacy bloated base64 photos from cache
+    pruneBloatedLocalStorage();
+
     const initial: Record<string, string> = {};
     Object.keys(DEFAULT_PHOTOS).forEach((k) => {
       try {
         const cached = localStorage.getItem('acedep_photo_' + k);
-        initial[k] = cached || DEFAULT_PHOTOS[k].defaultUrl;
+        if (cached && !cached.startsWith('data:image/') && cached.length < 2000) {
+          initial[k] = cached;
+        } else {
+          initial[k] = DEFAULT_PHOTOS[k].defaultUrl;
+        }
       } catch {
         initial[k] = DEFAULT_PHOTOS[k].defaultUrl;
       }
@@ -271,7 +310,11 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             if (data && data.url) {
               updated[docSnap.id] = data.url;
               try {
-                localStorage.setItem('acedep_photo_' + docSnap.id, data.url);
+                if (!data.url.startsWith('data:image/') && data.url.length < 2000) {
+                  localStorage.setItem('acedep_photo_' + docSnap.id, data.url);
+                } else {
+                  localStorage.removeItem('acedep_photo_' + docSnap.id);
+                }
               } catch {}
             }
           });
@@ -641,7 +684,11 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         [photoId]: optimizedUrl,
       }));
       try {
-        localStorage.setItem('acedep_photo_' + photoId, optimizedUrl);
+        if (!optimizedUrl.startsWith('data:image/') && optimizedUrl.length < 2000) {
+          localStorage.setItem('acedep_photo_' + photoId, optimizedUrl);
+        } else {
+          localStorage.removeItem('acedep_photo_' + photoId);
+        }
       } catch {}
 
       return true;

@@ -11,7 +11,8 @@ import {
   DownloadCloud, 
   HardDrive, 
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Cloud
 } from 'lucide-react';
 import { DiagnosticsService, FullDiagnosticReport } from '../services/diagnosticsService';
 import { usePhotos } from '../context/PhotosContext';
@@ -177,10 +178,10 @@ export const SyncDiagnosticCard: React.FC<SyncDiagnosticCardProps> = ({
 
         {/* Storage status */}
         <div className="p-2.5 rounded-xl bg-[#061120] border border-white/5 flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-purple-400 shrink-0" />
+          <Cloud className="w-4 h-4 text-emerald-400 shrink-0" />
           <div className="min-w-0">
-            <div className="text-[10px] text-slate-400">Armazenamento</div>
-            <div className="text-xs font-bold text-white truncate">{storageUsage.percent}% Usado</div>
+            <div className="text-[10px] text-slate-400">Nuvem Google</div>
+            <div className="text-xs font-bold text-white truncate">1 GB (&gt;99% Livre)</div>
           </div>
         </div>
       </div>

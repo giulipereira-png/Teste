@@ -130,6 +130,16 @@ interface CommunityContextType {
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
 
+// Helper to strip heavy base64 strings from local cache to prevent quota exceeded in browser
+const sanitizeAthletesForCache = (list: AthleteRecord[]): AthleteRecord[] => {
+  return list.map((a) => {
+    if (a.photoUrl && (a.photoUrl.startsWith('data:image/') || a.photoUrl.length > 2000)) {
+      return { ...a, photoUrl: '' };
+    }
+    return a;
+  });
+};
+
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>(INITIAL_NEWS_POSTS);
   const [cheers, setCheers] = useState<CommunityCheer[]>(INITIAL_COMMUNITY_CHEERS);
@@ -286,7 +296,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             });
             setAthletes(list);
             try {
-              localStorage.setItem('acedep_cached_athletes', JSON.stringify(list));
+              localStorage.setItem('acedep_cached_athletes', JSON.stringify(sanitizeAthletesForCache(list)));
             } catch {}
           }
         },
@@ -472,7 +482,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
         setAthletes(freshList);
         try {
-          localStorage.setItem('acedep_cached_athletes', JSON.stringify(freshList));
+          localStorage.setItem('acedep_cached_athletes', JSON.stringify(sanitizeAthletesForCache(freshList)));
         } catch {}
 
         matched = freshList.find(checkMatch);
@@ -711,7 +721,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ? prev.map((a, idx) => (idx === index ? sanitized : a))
           : [sanitized, ...prev];
         try {
-          localStorage.setItem('acedep_cached_athletes', JSON.stringify(updated));
+          localStorage.setItem('acedep_cached_athletes', JSON.stringify(sanitizeAthletesForCache(updated)));
         } catch {}
         return updated;
       });
@@ -725,7 +735,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ? prev.map((a, idx) => (idx === index ? sanitized : a))
           : [sanitized, ...prev];
         try {
-          localStorage.setItem('acedep_cached_athletes', JSON.stringify(updated));
+          localStorage.setItem('acedep_cached_athletes', JSON.stringify(sanitizeAthletesForCache(updated)));
         } catch {}
         return updated;
       });
