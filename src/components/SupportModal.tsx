@@ -80,18 +80,18 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-[#0a192f] border border-[#d4af37]/40 rounded-2xl shadow-2xl overflow-hidden text-slate-100 max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+      <div className="relative w-full max-w-2xl bg-[#0a192f] border-0 sm:border border-[#d4af37]/40 rounded-none sm:rounded-2xl shadow-2xl overflow-hidden text-slate-100 h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col">
         
         {/* Modal Header */}
-        <div className="p-6 bg-[#060e1c] border-b border-white/10 flex items-center justify-between">
+        <div className="p-4 sm:p-6 bg-[#060e1c] border-b border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <Logo variant="emblem" className="h-10" />
+            <Logo variant="emblem" className="h-9 sm:h-10" />
             <div>
-              <h3 className="text-lg font-bold text-white font-serif">
+              <h3 className="text-base sm:text-lg font-bold text-white font-serif">
                 Apoie a Equipe da ACEDEP
               </h3>
-              <p className="text-xs text-[#d4af37]">
+              <p className="text-[11px] sm:text-xs text-[#d4af37]">
                 Fortaleça o paradesporto e nossos atletas de natação com deficiência intelectual
               </p>
             </div>
@@ -107,7 +107,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-6 flex-1 touch-scroll overscroll-y-contain pb-[max(2rem,env(safe-area-inset-bottom))]">
           {submitted ? (
             <div className="py-8 text-center space-y-5">
               <div className="w-16 h-16 rounded-full bg-[#d4af37]/20 border border-[#d4af37] text-[#d4af37] flex items-center justify-center mx-auto">

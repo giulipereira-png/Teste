@@ -74,8 +74,8 @@ export const AdminPhotoManagerModal: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setPinError(false);
-    const success = await loginAdmin(pinInput);
-    if (!success) {
+    const res = await loginAdmin(pinInput);
+    if (!res.success) {
       setPinError(true);
     } else {
       setPinInput('');
@@ -236,9 +236,9 @@ export const AdminPhotoManagerModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
       <div 
-        className="relative w-full max-w-4xl bg-[#060e1c] border border-[#1e3a5f] rounded-2xl shadow-2xl overflow-hidden my-8"
+        className="relative w-full max-w-full sm:max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[94vh] bg-[#060e1c] border border-[#1e3a5f] rounded-none sm:rounded-2xl shadow-2xl overflow-hidden my-0 sm:my-8 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}

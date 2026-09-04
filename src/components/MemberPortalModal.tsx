@@ -60,45 +60,45 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
   };
 
   return (
-    <div id="member-portal-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div id="member-portal-modal-overlay" className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div 
         id="member-portal-modal-container"
-        className="relative w-full max-w-4xl max-h-[92vh] bg-[#0c1f38] border border-[#1e3a5f] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-4xl h-[100dvh] sm:h-auto sm:max-h-[92vh] bg-[#0c1f38] border-0 sm:border border-[#1e3a5f] rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e3a5f] bg-[#071326]/90">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37]">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[#1e3a5f] bg-[#071326]/90 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] shrink-0">
               <Waves className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-white font-serif flex items-center gap-2">
-                <span>Portal do Responsável & Atleta</span>
-                <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#f3e5ab] text-[10px] font-mono font-bold">
-                  Natação Paralímpica S14
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-white font-serif flex items-center gap-2 truncate">
+                <span className="truncate">Portal do Responsável</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#f3e5ab] text-[10px] font-mono font-bold shrink-0">
+                  S14
                 </span>
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 {isGuardianAuthenticated && currentAthlete
-                  ? `Atleta: ${currentAthlete.name} • Responsável: ${currentAthlete.guardianName || 'Família'}`
-                  : 'Área restrita e individual para acompanhamento do atleta da ACEDEP'
+                  ? `Atleta: ${currentAthlete.name}`
+                  : 'Área restrita e individual para acompanhamento do atleta'
                 }
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
             {isGuardianAuthenticated && currentAthlete && (
               <button
                 type="button"
                 onClick={() => setExportModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer"
                 title="Baixar Relatório em PDF ou Word"
               >
                 <FileDown className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span className="hidden sm:inline">Baixar Relatório</span>
+                <span className="hidden sm:inline">Relatório</span>
               </button>
             )}
 
@@ -106,7 +106,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
               <button
                 id="btn-guardian-logout"
                 onClick={guardianLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
                 title="Sair da Conta do Responsável"
               >
                 <LogOut className="w-3.5 h-3.5" />
@@ -126,7 +126,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
         </div>
 
         {/* Modal Body */}
-        <div className="overflow-y-auto p-6 sm:p-8 flex-1">
+        <div className="overflow-y-auto p-4 sm:p-8 flex-1 touch-scroll overscroll-y-contain pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           
           {!isGuardianAuthenticated || !currentAthlete ? (
             /* LOGIN SCREEN */
@@ -144,11 +144,11 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
               />
 
               {/* NAVIGATION TABS */}
-              <div className="flex flex-wrap sm:flex-nowrap gap-1.5 p-1.5 bg-black/40 rounded-2xl border border-[#1e3a5f]">
+              <div className="flex items-center gap-1.5 p-1.5 bg-black/40 rounded-2xl border border-[#1e3a5f] overflow-x-auto no-scrollbar scroll-smooth touch-pan-x">
                 <button
                   id="tab-btn-treinos"
                   onClick={() => setActiveTab('treinos')}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'treinos'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -161,7 +161,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
                 <button
                   id="tab-btn-tempos"
                   onClick={() => setActiveTab('tempos')}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'tempos'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -174,7 +174,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
                 <button
                   id="tab-btn-documentos"
                   onClick={() => setActiveTab('documentos')}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'documentos'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -187,7 +187,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
                 <button
                   id="tab-btn-mensagens"
                   onClick={() => setActiveTab('mensagens')}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'mensagens'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -200,7 +200,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
                 <button
                   id="tab-btn-emails"
                   onClick={() => setActiveTab('emails')}
-                  className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'emails'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -213,14 +213,14 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
                 <button
                   id="tab-btn-senha"
                   onClick={() => setActiveTab('senha')}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'senha'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
                   }`}
                 >
                   <KeyRound className="w-4 h-4" />
-                  <span className="hidden sm:inline">Senha</span>
+                  <span>Senha</span>
                 </button>
               </div>
 

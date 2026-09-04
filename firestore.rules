@@ -60,5 +60,15 @@ service cloud.firestore {
     match /admin_users/{userId} {
       allow read, write: if true;
     }
+
+    // Pedidos de avaliação e matrícula de atletas
+    match /enrollment_requests/{requestId} {
+      allow read, write: if true;
+    }
+
+    // Teste de conectividade do SDK
+    match /test/{testId} {
+      allow read, write: if true;
+    }
   }
 }

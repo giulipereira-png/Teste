@@ -30,6 +30,7 @@ import {
   FileText,
   Calendar,
   Eye,
+  EyeOff,
   Lock,
   LogOut,
   ShieldCheck,
@@ -111,6 +112,7 @@ export const AdminCoachPortalModal: React.FC = () => {
   const {
     isAdminAuthenticated,
     currentAdminProfile,
+    adminUsers,
     loginAdmin,
     logoutAdmin,
     adminModalOpen,
@@ -136,9 +138,18 @@ export const AdminCoachPortalModal: React.FC = () => {
   const [exportModalInitialType, setExportModalInitialType] = useState<ReportType>('athletes_general');
   const [exportModalAthleteId, setExportModalAthleteId] = useState<string | undefined>(undefined);
 
-  // PIN Login Form State
+  // Login Form State (Email & Password/PIN)
+  const [loginEmailInput, setLoginEmailInput] = useState(() => {
+    try {
+      return localStorage.getItem('acedep_last_login_email') || '';
+    } catch {
+      return '';
+    }
+  });
   const [pinInput, setPinInput] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [pinError, setPinError] = useState(false);
+  const [loginErrorMessage, setLoginErrorMessage] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Search & filter in athletes list
@@ -284,13 +295,36 @@ export const AdminCoachPortalModal: React.FC = () => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPinError(false);
-    setIsLoggingIn(true);
-    const success = await loginAdmin(pinInput);
-    setIsLoggingIn(false);
-    if (!success) {
+    setLoginErrorMessage('');
+
+    const cleanEmail = loginEmailInput.trim().toLowerCase();
+    const cleanPin = pinInput.trim();
+
+    if (!cleanEmail) {
       setPinError(true);
+      setLoginErrorMessage('Por favor, informe seu e-mail de professor ou coordenador.');
+      return;
+    }
+
+    if (!cleanPin) {
+      setPinError(true);
+      setLoginErrorMessage('Por favor, digite a sua senha de acesso.');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    const res = await loginAdmin(cleanPin, cleanEmail);
+    setIsLoggingIn(false);
+
+    if (!res.success) {
+      setPinError(true);
+      setLoginErrorMessage(res.error || 'Credenciais inválidas. Verifique seu e-mail e senha.');
     } else {
+      try {
+        localStorage.setItem('acedep_last_login_email', cleanEmail);
+      } catch {}
       setPinInput('');
+      setLoginErrorMessage('');
     }
   };
 
@@ -973,55 +1007,55 @@ export const AdminCoachPortalModal: React.FC = () => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 md:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div 
-        className="relative w-full max-w-5xl max-h-[94vh] bg-[#0c1f38] border border-[#1e3a5f] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-full sm:max-w-5xl h-[100dvh] sm:h-auto sm:max-h-[94vh] bg-[#0c1f38] border-0 sm:border border-[#1e3a5f] rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e3a5f] bg-[#071326]/95">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37]">
+        <div className="flex items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 border-b border-[#1e3a5f] bg-[#071326]/95 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] shrink-0">
               {isAdminAuthenticated ? <Waves className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
             </div>
-            <div>
-              <h3 className="text-base font-bold text-white font-serif flex items-center gap-2">
-                <span>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-white font-serif flex items-center gap-2 truncate">
+                <span className="truncate">
                   {isAdminAuthenticated 
                     ? isProfessor 
                       ? `Painel do(a) Professor(a) • ${currentAdminProfile?.name || 'Comissão Técnica'}`
                       : 'Painel da Coordenação Geral & Administração' 
-                    : 'Acesso Restrito • Equipe Técnica & Coordenação'}
+                    : 'Acesso da Equipe Técnica & Coordenação'}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold shrink-0 ${
                   isProfessor 
                     ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' 
                     : 'bg-[#d4af37]/20 text-[#f3e5ab] border border-[#d4af37]/40'
                 }`}>
-                  {isAdminAuthenticated ? (isProfessor ? 'Perfil Professor' : 'Gestão Geral ACEDEP') : 'Autenticação'}
+                  {isAdminAuthenticated ? (isProfessor ? 'Professor' : 'Coordenação Geral') : 'Login Seguro'}
                 </span>
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 {isAdminAuthenticated 
                   ? isProfessor 
-                    ? 'Chamada em treinos e campeonatos, cadastro de atletas, tempos RP, agenda e recados.'
-                    : 'Gestão geral: atletas, lista de presença, professores, fotos, notícias, comunicados e segurança.' 
-                  : 'Digite seu PIN ou senha cadastrada para acessar as ferramentas da ACEDEP.'}
+                    ? 'Lista de presença em treinos e campeonatos, tempos RP e cadastro de atletas.'
+                    : 'Gestão integral: atletas, lista de presença, professores, fotos e notícias.' 
+                  : 'Entre com seu e-mail cadastrado e senha para acessar o sistema.'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {isAdminAuthenticated && (
               <>
                 <button
                   type="button"
                   onClick={() => setDiagnosticModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
                   title="Diagnóstico de sincronização em tempo real do Firestore e Storage"
                 >
                   <Activity className="w-3.5 h-3.5 text-[#d4af37] animate-pulse" />
-                  <span className="hidden sm:inline">Diagnóstico Nuvem</span>
+                  <span className="hidden md:inline">Diagnóstico Nuvem</span>
                 </button>
 
                 <button
@@ -1034,7 +1068,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                     setExportModalAthleteId(undefined);
                     setExportModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
                   title="Exportar dados e relatórios em PDF ou Word"
                 >
                   <FileDown className="w-3.5 h-3.5 text-[#d4af37]" />
@@ -1043,8 +1077,8 @@ export const AdminCoachPortalModal: React.FC = () => {
 
                 <button
                   onClick={logoutAdmin}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
-                  title="Encerrar sessão de administrador"
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                  title="Encerrar sessão"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">Sair</span>
@@ -1062,75 +1096,160 @@ export const AdminCoachPortalModal: React.FC = () => {
 
         {!isAdminAuthenticated ? (
           /* =========================================================================
-             LOGIN FORM - PIN RESTRICTION GUARD
+             LOGIN FORM - EMAIL & PASSWORD GUARD FOR TEACHERS & ADMINS
              ========================================================================= */
-          <div className="p-8 sm:p-12 overflow-y-auto flex-1 flex items-center justify-center">
-            <div className="max-w-md w-full mx-auto text-center space-y-6">
-              <div className="w-16 h-16 mx-auto rounded-2xl bg-[#d4af37]/15 border-2 border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] shadow-xl">
-                <Lock className="w-8 h-8" />
-              </div>
-              
-              <div>
-                <h4 className="text-xl font-bold text-white font-serif mb-2">
-                  Painel Administrativo da ACEDEP
-                </h4>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Insira a senha de coordenador/administrador para acessar o cadastro de atletas, tempos de treinos, disparo de comunicados aos pais e notícias.
-                </p>
+          <div className="p-4 sm:p-8 md:p-12 overflow-y-auto flex-1 flex items-center justify-center">
+            <div className="max-w-md w-full mx-auto space-y-5">
+              <div className="text-center space-y-3">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-[#d4af37]/15 border-2 border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] shadow-xl">
+                  <ShieldCheck className="w-7 h-7 sm:w-8 sm:h-8" />
+                </div>
+                
+                <div>
+                  <h4 className="text-lg sm:text-xl font-bold text-white font-serif mb-1">
+                    Acesso da Equipe ACEDEP
+                  </h4>
+                  <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
+                    Informe seu e-mail cadastrado e sua senha de professor ou coordenador para ter acesso às ferramentas.
+                  </p>
+                </div>
               </div>
 
-              <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <form onSubmit={handleLoginSubmit} className="space-y-4 bg-black/40 p-5 sm:p-6 rounded-2xl border border-[#1e3a5f]/80 shadow-xl">
+                {/* Email Field */}
                 <div className="text-left">
                   <label className="block text-xs font-bold text-slate-300 mb-1.5">
-                    Senha de Administrador / Treinador
+                    E-mail do Professor ou Coordenador
                   </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      value={loginEmailInput}
+                      onChange={(e) => {
+                        setLoginEmailInput(e.target.value);
+                        setPinError(false);
+                        setLoginErrorMessage('');
+                      }}
+                      placeholder="ex: professor@acedep.com.br"
+                      className="w-full pl-10 pr-4 py-2.5 sm:py-3 rounded-xl bg-black/60 border border-[#1e3a5f] text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]"
+                      autoComplete="email"
+                      autoFocus
+                    />
+                  </div>
+                </div>
+
+                {/* Password / PIN Field */}
+                <div className="text-left">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-slate-300">
+                      Senha de Acesso
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-[11px] text-[#d4af37] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                      <span>{showPassword ? 'Ocultar' : 'Mostrar'}</span>
+                    </button>
+                  </div>
                   <div className="relative">
                     <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       value={pinInput}
                       onChange={(e) => {
                         setPinInput(e.target.value);
                         setPinError(false);
+                        setLoginErrorMessage('');
                       }}
-                      placeholder="Digite a senha de administrador..."
-                      className="w-full pl-10 pr-4 py-3 rounded-xl bg-black/50 border border-[#1e3a5f] text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]"
-                      autoFocus
+                      placeholder="Digite sua senha cadastrada..."
+                      className="w-full pl-10 pr-10 py-2.5 sm:py-3 rounded-xl bg-black/60 border border-[#1e3a5f] text-white text-sm placeholder-slate-500 focus:outline-none focus:border-[#d4af37] focus:ring-1 focus:ring-[#d4af37]"
                     />
                   </div>
-                  {pinError && (
-                    <p className="text-xs text-red-400 mt-2 flex items-center gap-1.5 font-medium">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      <span>Senha incorreta. Verifique com a coordenação da ACEDEP.</span>
-                    </p>
-                  )}
                 </div>
+
+                {/* Error Banner */}
+                {pinError && (
+                  <div className="p-3 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs flex items-start gap-2 animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+                    <div className="leading-snug">
+                      <p className="font-bold">Acesso não autorizado</p>
+                      <p className="mt-0.5 text-[11px] text-red-300/90">
+                        {loginErrorMessage || 'E-mail ou senha incorretos. Verifique suas credenciais.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="submit"
                   disabled={isLoggingIn || !pinInput.trim()}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b8952b] text-[#060e1c] font-bold text-sm hover:brightness-110 active:scale-[0.99] transition-all shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b8952b] text-[#060e1c] font-bold text-sm hover:brightness-110 active:scale-[0.99] transition-all shadow-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isLoggingIn ? 'Verificando...' : 'Acessar Painel da Coordenação'}
+                  {isLoggingIn ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Verificando credenciais...</span>
+                    </>
+                  ) : (
+                    <span>Entrar no Painel ACEDEP</span>
+                  )}
                 </button>
+
+                {/* Quick Select Profile Pills for easier mobile login */}
+                {adminUsers && adminUsers.length > 0 && (
+                  <div className="pt-2 border-t border-white/5 text-left">
+                    <p className="text-[11px] font-semibold text-slate-400 mb-2">
+                      Professores & Administradores cadastrados:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {adminUsers.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          onClick={() => {
+                            setLoginEmailInput(u.email);
+                            setPinError(false);
+                            setLoginErrorMessage('');
+                          }}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                            loginEmailInput.toLowerCase() === u.email.toLowerCase()
+                              ? 'bg-[#d4af37]/20 text-[#f3e5ab] border-[#d4af37]'
+                              : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+                          }`}
+                        >
+                          <span className={`w-2 h-2 rounded-full ${u.role === 'Professor' ? 'bg-cyan-400' : 'bg-[#d4af37]'}`} />
+                          <span className="font-medium">{u.name}</span>
+                          <span className="text-[9px] text-slate-400">({u.role})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </form>
 
-              <div className="pt-2 text-[11px] text-slate-400 border-t border-white/5">
-                <span>Dúvidas ou suporte? Contate a secretaria: </span>
-                <strong className="text-slate-300">giuli.pereira@gmail.com</strong>
+              <div className="text-center text-[11px] text-slate-400 space-y-1">
+                <p>
+                  Professores têm acesso restrito à chamada, tempos e recados da equipe.
+                </p>
+                <p>
+                  Coordenação Geral: <strong className="text-slate-300">giuli.pereira@gmail.com</strong>
+                </p>
               </div>
             </div>
           </div>
         ) : (
           <>
-            {/* Tabs Bar */}
-            <div className="px-4 sm:px-6 pt-3 pb-2 bg-[#0a192f] border-b border-[#1e3a5f]/60">
-              <div className="flex flex-wrap gap-1.5 p-1 bg-black/40 rounded-xl border border-[#1e3a5f]">
+            {/* Tabs Bar - Horizontally scrollable on mobile */}
+            <div className="px-3 sm:px-6 pt-2 sm:pt-3 pb-2 bg-[#0a192f] border-b border-[#1e3a5f]/60 shrink-0">
+              <div className="flex items-center gap-1.5 p-1.5 bg-black/40 rounded-xl border border-[#1e3a5f] overflow-x-auto no-scrollbar scroll-smooth">
                 
                 {/* 1. Atletas (Professor & Admin) */}
                 <button
                   onClick={() => setActiveTab('atletas')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'atletas'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1143,7 +1262,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                 {/* 2. Lista de Presença (Professor & Admin) */}
                 <button
                   onClick={() => setActiveTab('presenca')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'presenca'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1156,7 +1275,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                 {/* 3. Tempos RP (Professor & Admin) */}
                 <button
                   onClick={() => setActiveTab('tempos')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'tempos'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1169,7 +1288,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                 {/* 4. Agenda 2026 & Competições (Professor & Admin) */}
                 <button
                   onClick={() => setActiveTab('agenda')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'agenda'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1182,7 +1301,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                 {/* 5. Recados Técnicos aos Pais (Professor & Admin) */}
                 <button
                   onClick={() => setActiveTab('recados')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'recados'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1195,7 +1314,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                 {/* 5. Mural da Família (Professor & Admin) */}
                 <button
                   onClick={() => setActiveTab('mural_familia')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'mural_familia'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1208,7 +1327,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                 {/* Diagnóstico & Sincronização (Professor & Admin) */}
                 <button
                   onClick={() => setActiveTab('diagnostico')}
-                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                     activeTab === 'diagnostico'
                       ? 'bg-[#d4af37] text-[#060e1c] shadow'
                       : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1223,7 +1342,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                   <>
                     <button
                       onClick={() => setActiveTab('administradores')}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                         activeTab === 'administradores'
                           ? 'bg-[#d4af37] text-[#060e1c] shadow'
                           : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1235,7 +1354,7 @@ export const AdminCoachPortalModal: React.FC = () => {
 
                     <button
                       onClick={() => setActiveTab('fotos')}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                         activeTab === 'fotos'
                           ? 'bg-[#d4af37] text-[#060e1c] shadow'
                           : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1247,7 +1366,7 @@ export const AdminCoachPortalModal: React.FC = () => {
 
                     <button
                       onClick={() => setActiveTab('galeria')}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                         activeTab === 'galeria'
                           ? 'bg-[#d4af37] text-[#060e1c] shadow'
                           : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1259,7 +1378,7 @@ export const AdminCoachPortalModal: React.FC = () => {
 
                     <button
                       onClick={() => setActiveTab('noticias')}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                         activeTab === 'noticias'
                           ? 'bg-[#d4af37] text-[#060e1c] shadow'
                           : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1271,7 +1390,7 @@ export const AdminCoachPortalModal: React.FC = () => {
 
                     <button
                       onClick={() => setActiveTab('emails')}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                         activeTab === 'emails'
                           ? 'bg-[#d4af37] text-[#060e1c] shadow'
                           : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1283,7 +1402,7 @@ export const AdminCoachPortalModal: React.FC = () => {
 
                     <button
                       onClick={() => setActiveTab('seguranca')}
-                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
                         activeTab === 'seguranca'
                           ? 'bg-[#d4af37] text-[#060e1c] shadow'
                           : 'text-slate-300 hover:text-white hover:bg-white/5'
@@ -1298,7 +1417,7 @@ export const AdminCoachPortalModal: React.FC = () => {
             </div>
 
         {/* Modal Scrollable Body */}
-        <div className="overflow-y-auto p-6 sm:p-8 flex-1 space-y-6">
+        <div className="overflow-y-auto p-3 sm:p-6 md:p-8 flex-1 space-y-5 sm:space-y-6 overscroll-y-contain">
           
           {/* =========================================================================
               TAB: LISTA DE PRESENÇA (TREINOS & CAMPEONATOS)

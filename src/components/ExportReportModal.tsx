@@ -103,28 +103,28 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
       <div 
-        className="relative w-full max-w-2xl bg-[#0c1f38] border border-[#1e3a5f] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-2xl bg-[#0c1f38] border-0 sm:border border-[#1e3a5f] rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto sm:max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e3a5f] bg-[#071326]/90">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37]">
+        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[#1e3a5f] bg-[#071326]/90 shrink-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] shrink-0">
               <FileDown className="w-5 h-5" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-white font-serif flex items-center gap-2">
-                <span>Exportar Relatórios Oficiais</span>
-                <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#f3e5ab] text-[10px] font-mono font-bold">
-                  PDF & Word (.doc)
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-bold text-white font-serif flex items-center gap-2 truncate">
+                <span className="truncate">Exportar Relatórios</span>
+                <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#f3e5ab] text-[10px] font-mono font-bold shrink-0">
+                  PDF & Word
                 </span>
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 {isMemberPortal && fixedAthlete 
-                  ? `Relatório do atleta: ${fixedAthlete.name} • CNPJ ${INSTITUTION_INFO.cnpj}`
-                  : `Emissão de documentos oficiais da ACEDEP • CNPJ ${INSTITUTION_INFO.cnpj}`}
+                  ? `Atleta: ${fixedAthlete.name}`
+                  : `Documentos oficiais da ACEDEP • CNPJ ${INSTITUTION_INFO.cnpj}`}
               </p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-5 overflow-y-auto flex-1 text-xs">
+        <div className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1 text-xs touch-scroll overscroll-y-contain pb-[max(2rem,env(safe-area-inset-bottom))]">
           
           {/* Feedback message */}
           {successFeedback && (

@@ -66,7 +66,7 @@ export default function App() {
   return (
     <PhotosProvider>
       <CommunityProvider>
-        <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c]">
+        <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] overflow-x-hidden w-full max-w-full">
           {/* Header & Navbar */}
           <Navbar
             currentPage={currentPage}

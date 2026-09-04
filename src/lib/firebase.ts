@@ -37,7 +37,7 @@ const databaseId = config.firestoreDatabaseId && config.firestoreDatabaseId !== 
 let firestoreDb;
 try {
   firestoreDb = initializeFirestore(app, {
-    experimentalAutoDetectLongPolling: true,
+    experimentalForceLongPolling: true,
     ignoreUndefinedProperties: true,
   }, databaseId);
 } catch {
@@ -87,15 +87,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 // Non-blocking connection check on startup
 export async function testConnection() {
   try {
-    await getDocFromServer(doc(db, 'settings', 'connection_test'));
+    await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
     if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore operating in offline cache mode.');
+      console.warn('Firestore operating in offline cache mode. Please check your Firebase configuration.');
     }
   }
 }
 
-testConnection();
+// Defer test connection slightly to allow initial long-polling setup
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    testConnection().catch(() => {});
+  }, 300);
+}
 
 export { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, collection, query, orderBy, getDocs, getDocFromServer };
 

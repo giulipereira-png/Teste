@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { db, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, handleFirestoreError, OperationType } from '../lib/firebase';
+import { db, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, getDocs, handleFirestoreError, OperationType } from '../lib/firebase';
 import { AdminUser } from '../types';
 import { INITIAL_ADMIN_USERS } from '../data/initialCommunityData';
 import { optimizeImage } from '../lib/imageOptimizer';
@@ -163,7 +163,7 @@ interface PhotosContextType {
   adminModalOpen: boolean;
   openAdminModal: () => void;
   closeAdminModal: () => void;
-  loginAdmin: (pin: string, email?: string) => Promise<boolean>;
+  loginAdmin: (pin: string, email?: string) => Promise<{ success: boolean; error?: string }>;
   logoutAdmin: () => void;
   savePhotoToDatabase: (photoId: string, dataUrl: string, title?: string) => Promise<boolean>;
   resetPhotoToDefault: (photoId: string) => Promise<boolean>;
@@ -232,7 +232,16 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
 
   const [galleryPhotos, setGalleryPhotos] = useState<GalleryPhotoItem[]>(INITIAL_GALLERY_PHOTOS);
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(INITIAL_ADMIN_USERS);
+  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(() => {
+    try {
+      const cached = localStorage.getItem('acedep_cached_admin_users');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_ADMIN_USERS;
+  });
   const [currentAdminProfile, setCurrentAdminProfile] = useState<AdminUser | null>(() => {
     try {
       const saved = localStorage.getItem('acedep_admin_profile') || sessionStorage.getItem('acedep_admin_profile');
@@ -427,6 +436,9 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
           if (list.length > 0) {
             setAdminUsers(list);
+            try {
+              localStorage.setItem('acedep_cached_admin_users', JSON.stringify(list));
+            } catch {}
           } else {
             setAdminUsers(INITIAL_ADMIN_USERS);
           }
@@ -485,17 +497,60 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, []);
 
-  const loginAdmin = async (pin: string, email?: string): Promise<boolean> => {
+  const loginAdmin = async (
+    pin: string,
+    email?: string
+  ): Promise<{ success: boolean; error?: string }> => {
     const normalizedPin = pin.trim();
     const normalizedEmail = (email || '').trim().toLowerCase();
-    if (!normalizedPin) return false;
+    if (!normalizedPin) {
+      return { success: false, error: 'Por favor, informe sua senha de acesso.' };
+    }
 
-    // 1. Check if matches any active admin in adminUsers collection
-    const matchedAdmin = adminUsers.find(
-      (a) => a.isActive && a.pin === normalizedPin && (!normalizedEmail || a.email.toLowerCase() === normalizedEmail)
-    );
+    // 1. Check if matches any active admin in memory/cached adminUsers
+    let matchedAdmin = adminUsers.find((a) => {
+      const pinMatch = a.pin?.trim() === normalizedPin;
+      if (!normalizedEmail) return pinMatch;
+      return pinMatch && a.email.toLowerCase().trim() === normalizedEmail;
+    });
+
+    // 2. If not matched, query fresh collection direct from Firestore
+    if (!matchedAdmin) {
+      try {
+        const snapshot = await getDocs(collection(db, 'admin_users'));
+        const freshList: AdminUser[] = [];
+        snapshot.forEach((docSnap) => {
+          const d = docSnap.data() as AdminUser;
+          if (d && d.name) {
+            freshList.push({ ...d, id: docSnap.id });
+          }
+        });
+
+        if (freshList.length > 0) {
+          setAdminUsers(freshList);
+          try {
+            localStorage.setItem('acedep_cached_admin_users', JSON.stringify(freshList));
+          } catch {}
+
+          matchedAdmin = freshList.find((a) => {
+            const pinMatch = a.pin?.trim() === normalizedPin;
+            if (!normalizedEmail) return pinMatch;
+            return pinMatch && a.email.toLowerCase().trim() === normalizedEmail;
+          });
+        }
+      } catch (e) {
+        console.warn('Direct Firestore check error:', e);
+      }
+    }
 
     if (matchedAdmin) {
+      if (!matchedAdmin.isActive) {
+        return {
+          success: false,
+          error: 'Este perfil de professor foi desativado pela coordenação.',
+        };
+      }
+
       setIsAdminAuthenticated(true);
       setCurrentAdminProfile(matchedAdmin);
       try {
@@ -504,23 +559,33 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         sessionStorage.setItem('acedep_admin_auth', 'true');
         sessionStorage.setItem('acedep_admin_profile', JSON.stringify(matchedAdmin));
       } catch {}
+
       // update lastLogin in firestore non-blockingly
       updateDoc(doc(db, 'admin_users', matchedAdmin.id), {
-        lastLogin: new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        lastLogin:
+          new Date().toLocaleDateString('pt-BR') +
+          ' às ' +
+          new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       }).catch(() => {});
-      return true;
+
+      return { success: true };
     }
 
-    // 2. Check remote master pin in settings/admin
+    // 3. Check remote master pin in settings/admin (for Super Admin)
     try {
       const settingsDoc = await getDoc(doc(db, 'settings', 'admin'));
       if (settingsDoc.exists() && settingsDoc.data().adminPin) {
-        const storedPin = settingsDoc.data().adminPin;
-        if (storedPin === normalizedPin) {
+        const storedPin = settingsDoc.data().adminPin?.trim();
+        if (
+          storedPin === normalizedPin &&
+          (!normalizedEmail ||
+            normalizedEmail === 'giuli.pereira@gmail.com' ||
+            normalizedEmail.includes('admin'))
+        ) {
           setIsAdminAuthenticated(true);
-          const masterAdmin = adminUsers[0] || {
+          const masterAdmin = adminUsers.find((a) => a.email.toLowerCase() === 'giuli.pereira@gmail.com') || {
             id: 'admin-master',
-            name: 'Super Admin ACEDEP',
+            name: 'Coordenação Geral ACEDEP (Giuliana)',
             email: 'giuli.pereira@gmail.com',
             role: 'Super Admin',
             pin: storedPin,
@@ -534,20 +599,24 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             sessionStorage.setItem('acedep_admin_auth', 'true');
             sessionStorage.setItem('acedep_admin_profile', JSON.stringify(masterAdmin));
           } catch {}
-          return true;
+          return { success: true };
         }
-        return false;
       }
     } catch (e) {
       console.warn('Could not verify remote admin pin from Firestore:', e);
     }
 
-    // 3. Fallback PINs (initial bootstrap)
-    if (['acedep1990', '1990', 'admin1990', '2026'].includes(normalizedPin)) {
+    // 4. Fallback default PINs (only for Super Admin)
+    if (
+      ['acedep1990', '1990', 'admin1990', '2026'].includes(normalizedPin) &&
+      (!normalizedEmail ||
+        normalizedEmail === 'giuli.pereira@gmail.com' ||
+        normalizedEmail.includes('admin'))
+    ) {
       setIsAdminAuthenticated(true);
       const fallbackAdmin: AdminUser = {
         id: 'admin-master-1',
-        name: 'Coordenação Geral ACEDEP',
+        name: 'Coordenação Geral ACEDEP (Giuliana)',
         email: 'giuli.pereira@gmail.com',
         role: 'Super Admin',
         pin: normalizedPin,
@@ -561,10 +630,31 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         sessionStorage.setItem('acedep_admin_auth', 'true');
         sessionStorage.setItem('acedep_admin_profile', JSON.stringify(fallbackAdmin));
       } catch {}
-      return true;
+      return { success: true };
     }
 
-    return false;
+    // If email was provided, give precise feedback
+    if (normalizedEmail) {
+      const emailExists = adminUsers.some(
+        (a) => a.email.toLowerCase().trim() === normalizedEmail
+      );
+      if (emailExists) {
+        return {
+          success: false,
+          error: 'Senha incorreta para o e-mail informado. Tente novamente ou verifique com a coordenação.',
+        };
+      } else {
+        return {
+          success: false,
+          error: 'E-mail não encontrado na lista de professores ou coordenadores cadastrados.',
+        };
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Credenciais de acesso incorretas. Digite seu e-mail de professor e a senha cadastrada.',
+    };
   };
 
   const addAdminUser = async (admin: Omit<AdminUser, 'id' | 'createdAt'>): Promise<boolean> => {
@@ -576,7 +666,13 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         createdAt: new Date().toISOString(),
       };
       await setDoc(doc(db, 'admin_users', id), newAdmin);
-      setAdminUsers((prev) => [...prev.filter((a) => a.id !== id), newAdmin]);
+      setAdminUsers((prev) => {
+        const updated = [...prev.filter((a) => a.id !== id), newAdmin];
+        try {
+          localStorage.setItem('acedep_cached_admin_users', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
       return true;
     } catch (err) {
       console.error('Error adding admin user to Firestore:', err);
@@ -587,9 +683,13 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateAdminUser = async (id: string, updates: Partial<AdminUser>): Promise<boolean> => {
     try {
       await updateDoc(doc(db, 'admin_users', id), updates);
-      setAdminUsers((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, ...updates } : a))
-      );
+      setAdminUsers((prev) => {
+        const updated = prev.map((a) => (a.id === id ? { ...a, ...updates } : a));
+        try {
+          localStorage.setItem('acedep_cached_admin_users', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
       if (currentAdminProfile?.id === id) {
         const updated = { ...currentAdminProfile, ...updates };
         setCurrentAdminProfile(updated);
@@ -612,7 +712,13 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return false;
       }
       await deleteDoc(doc(db, 'admin_users', id));
-      setAdminUsers((prev) => prev.filter((a) => a.id !== id));
+      setAdminUsers((prev) => {
+        const updated = prev.filter((a) => a.id !== id);
+        try {
+          localStorage.setItem('acedep_cached_admin_users', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
       return true;
     } catch (err) {
       console.error('Error deleting admin user:', err);

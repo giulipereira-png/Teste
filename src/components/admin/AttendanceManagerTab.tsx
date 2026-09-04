@@ -450,55 +450,55 @@ export const AttendanceManagerTab: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* TOP HEADER: View Selector & Month Navigation */}
-      <div className="p-5 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="p-3.5 sm:p-5 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] shadow-lg flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37]">
+            <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] shrink-0">
               <CalendarDays className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white font-serif flex items-center gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-white font-serif flex items-center gap-2 flex-wrap">
                 <span>Ficha de Presença dos Treinos</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[11px] font-mono font-bold">
-                  Auto-Save Ativo 💾
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] sm:text-[11px] font-mono font-bold">
+                  Auto-Save 💾
                 </span>
               </h3>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400">
                 Calendário mensal interativo por atleta: dê 1 clique no dia para dar o check de presença.
               </p>
             </div>
           </div>
         </div>
 
-        {/* View Mode Switcher */}
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-black/50 rounded-xl border border-[#1e3a5f] self-start lg:self-center">
+        {/* View Mode Switcher - smooth horizontal scroll on mobile */}
+        <div className="flex items-center gap-1.5 p-1 bg-black/50 rounded-xl border border-[#1e3a5f] overflow-x-auto no-scrollbar scroll-smooth w-full lg:w-auto">
           <button
             onClick={() => setViewMode('matrix')}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
               viewMode === 'matrix'
                 ? 'bg-[#d4af37] text-[#060e1c] shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Grid className="w-4 h-4" />
-            <span>Grade Geral de Treinos (Mês)</span>
+            <span>Grade Geral de Treinos</span>
           </button>
 
           <button
             onClick={() => setViewMode('championships_matrix')}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
               viewMode === 'championships_matrix'
                 ? 'bg-[#d4af37] text-[#060e1c] shadow'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Trophy className="w-4 h-4" />
-            <span>Grade Geral de Campeonatos</span>
+            <span>Grade de Campeonatos</span>
           </button>
 
           <button
             onClick={() => setViewMode('calendar')}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
               viewMode === 'calendar'
                 ? 'bg-[#d4af37] text-[#060e1c] shadow'
                 : 'text-slate-400 hover:text-white'
@@ -510,7 +510,7 @@ export const AttendanceManagerTab: React.FC = () => {
 
           <button
             onClick={() => setViewMode('sessions')}
-            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
               viewMode === 'sessions'
                 ? 'bg-[#d4af37] text-[#060e1c] shadow'
                 : 'text-slate-400 hover:text-white'
@@ -523,25 +523,25 @@ export const AttendanceManagerTab: React.FC = () => {
       </div>
 
       {/* MONTH & YEAR SELECTOR BAR */}
-      <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-[#081528] border border-[#1e3a5f]">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 rounded-2xl bg-[#081528] border border-[#1e3a5f]">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar">
           <button
             onClick={handlePrevMonth}
-            className="p-2 rounded-xl bg-black/40 hover:bg-[#1e3a5f] text-slate-300 hover:text-white border border-[#1e3a5f] transition-all cursor-pointer shadow"
+            className="p-2 rounded-xl bg-black/40 hover:bg-[#1e3a5f] text-slate-300 hover:text-white border border-[#1e3a5f] transition-all cursor-pointer shadow shrink-0"
             title="Mês Anterior"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-[#d4af37]/40 shadow-inner">
-            <span className="text-sm font-bold text-white font-serif">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/60 border border-[#d4af37]/40 shadow-inner shrink-0">
+            <span className="text-xs sm:text-sm font-bold text-white font-serif whitespace-nowrap">
               {MONTH_NAMES[selectedMonth]} {selectedYear}
             </span>
           </div>
 
           <button
             onClick={handleNextMonth}
-            className="p-2 rounded-xl bg-black/40 hover:bg-[#1e3a5f] text-slate-300 hover:text-white border border-[#1e3a5f] transition-all cursor-pointer shadow"
+            className="p-2 rounded-xl bg-black/40 hover:bg-[#1e3a5f] text-slate-300 hover:text-white border border-[#1e3a5f] transition-all cursor-pointer shadow shrink-0"
             title="Próximo Mês"
           >
             <ChevronRight className="w-4 h-4" />
@@ -549,7 +549,7 @@ export const AttendanceManagerTab: React.FC = () => {
 
           <button
             onClick={handleSetCurrentMonth}
-            className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold border border-white/10 transition-all cursor-pointer"
+            className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold border border-white/10 transition-all cursor-pointer shrink-0 whitespace-nowrap"
           >
             Mês Atual
           </button>
@@ -558,9 +558,9 @@ export const AttendanceManagerTab: React.FC = () => {
         {/* Live Auto-save feedback badge & Export Actions */}
         <div className="flex flex-wrap items-center gap-2">
           {autoSaveFeedback.visible ? (
-            <div className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 animate-in fade-in duration-200">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-pulse" />
-              <span>{autoSaveFeedback.text}</span>
+            <div className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] sm:text-xs font-bold flex items-center gap-1.5 animate-in fade-in duration-200">
+              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400 animate-pulse" />
+              <span className="truncate max-w-[140px] sm:max-w-none">{autoSaveFeedback.text}</span>
               <span className="text-[10px] text-slate-400 font-mono">({autoSaveFeedback.time})</span>
             </div>
           ) : (
@@ -570,7 +570,7 @@ export const AttendanceManagerTab: React.FC = () => {
             </div>
           )}
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             <button
               type="button"
               onClick={() => {
@@ -579,11 +579,11 @@ export const AttendanceManagerTab: React.FC = () => {
                 );
                 setExportModalOpen(true);
               }}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b8952b] text-[#060e1c] font-bold text-xs shadow-md hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b8952b] text-[#060e1c] font-bold text-xs shadow-md hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Exportar Lista de Chamada e Frequência em PDF ou Word"
             >
               <FileDown className="w-3.5 h-3.5" />
-              <span>Exportar Chamada (PDF / Word)</span>
+              <span>Exportar Chamada</span>
             </button>
 
             <button
@@ -592,7 +592,7 @@ export const AttendanceManagerTab: React.FC = () => {
                 setExportInitialType('attendance_blank_sheet');
                 setExportModalOpen(true);
               }}
-              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/15 transition-all flex items-center gap-1.5 cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/15 transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               title="Gerar Folha em Branco para Borda de Piscina"
             >
               <Printer className="w-3.5 h-3.5 text-[#d4af37]" />
@@ -936,19 +936,19 @@ export const AttendanceManagerTab: React.FC = () => {
       {/* VIEW 2: TEAM FULL MONTH MATRIX (GRADE GERAL DE TREINOS DO MÊS) */}
       {/* ========================================================================= */}
       {viewMode === 'matrix' && (
-        <div className="p-6 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] shadow-xl space-y-4">
+        <div className="p-3.5 sm:p-6 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] shadow-xl space-y-3 sm:space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1e3a5f] pb-4">
             <div>
-              <h4 className="text-base font-bold text-white font-serif flex items-center gap-2">
+              <h4 className="text-sm sm:text-base font-bold text-white font-serif flex items-center gap-2">
                 <Grid className="w-4 h-4 text-[#d4af37]" />
                 <span>Grade Geral de Presença: {MONTH_NAMES[selectedMonth]} de {selectedYear}</span>
               </h4>
-              <p className="text-xs text-slate-400">
+              <p className="text-[11px] sm:text-xs text-slate-400">
                 Visão panorâmica de todos os atletas x todos os dias do mês. Clique em qualquer célula para alternar o check do dia.
               </p>
             </div>
 
-            <div className="flex items-center gap-3 text-xs">
+            <div className="flex items-center gap-2.5 text-[11px] sm:text-xs flex-wrap">
               <span className="flex items-center gap-1 text-emerald-400 font-semibold">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span> Presente (✓)
               </span>
@@ -962,102 +962,111 @@ export const AttendanceManagerTab: React.FC = () => {
           </div>
 
           {/* Matrix Scrollable Table */}
-          <div className="overflow-x-auto rounded-xl border border-[#1e3a5f] bg-black/40">
-            <table className="w-full text-xs text-left border-collapse min-w-[900px]">
-              <thead>
-                <tr className="bg-[#071326] border-b border-[#1e3a5f] text-slate-300">
-                  <th className="p-3 sticky left-0 bg-[#071326] z-10 min-w-[180px] font-bold text-white">
-                    Atleta
-                  </th>
-                  {Array.from({ length: daysInMonth }).map((_, idx) => {
-                    const dayNum = idx + 1;
-                    const date = new Date(selectedYear, selectedMonth, dayNum);
-                    const weekDayLetter = WEEK_DAYS[date.getDay()].charAt(0);
-                    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-[11px] text-slate-400 sm:hidden">
+              <span className="flex items-center gap-1 text-[#d4af37]">
+                <span>↔</span> Deslize para o lado para ver todos os dias
+              </span>
+              <span>{athletes.length} atletas</span>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-[#1e3a5f] bg-black/40 touch-pan-x overscroll-x-contain">
+              <table className="w-full text-xs text-left border-collapse min-w-[700px] sm:min-w-[900px]">
+                <thead>
+                  <tr className="bg-[#071326] border-b border-[#1e3a5f] text-slate-300">
+                    <th className="p-2 sm:p-3 sticky left-0 bg-[#071326] z-10 min-w-[130px] sm:min-w-[180px] font-bold text-white shadow-[2px_0_6px_-2px_rgba(0,0,0,0.6)]">
+                      Atleta
+                    </th>
+                    {Array.from({ length: daysInMonth }).map((_, idx) => {
+                      const dayNum = idx + 1;
+                      const date = new Date(selectedYear, selectedMonth, dayNum);
+                      const weekDayLetter = WEEK_DAYS[date.getDay()].charAt(0);
+                      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+                      return (
+                        <th
+                          key={dayNum}
+                          className={`p-1 sm:p-1.5 text-center min-w-[26px] sm:min-w-[28px] font-bold border-l border-white/5 ${
+                            isWeekend ? 'bg-black/30 text-slate-500' : 'text-[#f3e5ab]'
+                          }`}
+                        >
+                          <div className="text-[10px] leading-tight">{dayNum}</div>
+                          <div className="text-[8px] text-slate-400 font-normal">{weekDayLetter}</div>
+                        </th>
+                      );
+                    })}
+                    <th className="p-2 sm:p-3 text-center min-w-[70px] sm:min-w-[90px] font-bold text-[#d4af37] border-l border-[#1e3a5f]">
+                      % Mês
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {athletes.map((ath) => {
+                    const stats = getAthleteMonthStats(ath);
 
                     return (
-                      <th
-                        key={dayNum}
-                        className={`p-1.5 text-center min-w-[28px] font-bold border-l border-white/5 ${
-                          isWeekend ? 'bg-black/30 text-slate-500' : 'text-[#f3e5ab]'
-                        }`}
-                      >
-                        <div className="text-[10px] leading-tight">{dayNum}</div>
-                        <div className="text-[8px] text-slate-400 font-normal">{weekDayLetter}</div>
-                      </th>
+                      <tr key={ath.id} className="hover:bg-white/5 transition-colors">
+                        {/* Athlete sticky name cell */}
+                        <td className="p-2 sm:p-2.5 sticky left-0 bg-[#0c1f38] z-10 border-r border-[#1e3a5f] flex items-center gap-1.5 sm:gap-2 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.6)]">
+                          <img
+                            src={ath.photoUrl}
+                            alt={ath.name}
+                            className="w-5 h-5 sm:w-6 sm:h-6 rounded-full object-cover shrink-0 border border-white/10"
+                            referrerPolicy="no-referrer"
+                          />
+                          <span className="font-bold text-white truncate max-w-[90px] sm:max-w-[130px] text-[11px] sm:text-xs">{ath.name}</span>
+                        </td>
+
+                        {/* Days cells */}
+                        {Array.from({ length: daysInMonth }).map((_, idx) => {
+                          const dayNum = idx + 1;
+                          const dateStr = formatDayDate(dayNum);
+                          const status = getAthleteDayStatus(ath, dateStr);
+                          const isScheduled = isAthleteScheduledDay(ath, dayNum);
+
+                          return (
+                            <td
+                              key={dayNum}
+                              onClick={() => handleToggleDay(ath.id, dayNum)}
+                              className={`p-1 text-center border-l border-white/5 cursor-pointer select-none transition-all ${
+                                status === 'presente'
+                                  ? 'bg-emerald-950/80 text-emerald-300 font-black'
+                                  : status === 'falta'
+                                  ? 'bg-red-950/80 text-red-300 font-black'
+                                  : status === 'falta_justificada'
+                                  ? 'bg-amber-950/80 text-amber-300 font-black'
+                                  : isScheduled
+                                  ? 'bg-cyan-950/20 hover:bg-cyan-950/40 text-slate-500'
+                                  : 'hover:bg-white/10 text-slate-600'
+                              }`}
+                              title={`Atleta: ${ath.name} - Dia ${dayNum}/${selectedMonth + 1}`}
+                            >
+                              {status === 'presente' && '✓'}
+                              {status === 'falta' && '✕'}
+                              {status === 'falta_justificada' && '!'}
+                              {status === 'sem_registro' && isScheduled && '·'}
+                            </td>
+                          );
+                        })}
+
+                        {/* Percentage Cell */}
+                        <td className="p-2 sm:p-2.5 text-center font-mono font-bold text-[11px] sm:text-xs border-l border-[#1e3a5f]">
+                          <span className={`px-1.5 sm:px-2 py-0.5 rounded-full border ${
+                            stats.percentage >= 85
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                              : stats.percentage >= 70
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                              : 'bg-red-500/20 text-red-300 border-red-500/30'
+                          }`}>
+                            {stats.percentage}%
+                          </span>
+                        </td>
+                      </tr>
                     );
                   })}
-                  <th className="p-3 text-center min-w-[90px] font-bold text-[#d4af37] border-l border-[#1e3a5f]">
-                    % Mês
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {athletes.map((ath) => {
-                  const stats = getAthleteMonthStats(ath);
-
-                  return (
-                    <tr key={ath.id} className="hover:bg-white/5 transition-colors">
-                      {/* Athlete sticky name cell */}
-                      <td className="p-2.5 sticky left-0 bg-[#0c1f38] z-10 border-r border-[#1e3a5f] flex items-center gap-2">
-                        <img
-                          src={ath.photoUrl}
-                          alt={ath.name}
-                          className="w-6 h-6 rounded-full object-cover shrink-0 border border-white/10"
-                          referrerPolicy="no-referrer"
-                        />
-                        <span className="font-bold text-white truncate max-w-[130px]">{ath.name}</span>
-                      </td>
-
-                      {/* Days cells */}
-                      {Array.from({ length: daysInMonth }).map((_, idx) => {
-                        const dayNum = idx + 1;
-                        const dateStr = formatDayDate(dayNum);
-                        const status = getAthleteDayStatus(ath, dateStr);
-                        const isScheduled = isAthleteScheduledDay(ath, dayNum);
-
-                        return (
-                          <td
-                            key={dayNum}
-                            onClick={() => handleToggleDay(ath.id, dayNum)}
-                            className={`p-1 text-center border-l border-white/5 cursor-pointer select-none transition-all ${
-                              status === 'presente'
-                                ? 'bg-emerald-950/80 text-emerald-300 font-black'
-                                : status === 'falta'
-                                ? 'bg-red-950/80 text-red-300 font-black'
-                                : status === 'falta_justificada'
-                                ? 'bg-amber-950/80 text-amber-300 font-black'
-                                : isScheduled
-                                ? 'bg-cyan-950/20 hover:bg-cyan-950/40 text-slate-500'
-                                : 'hover:bg-white/10 text-slate-600'
-                            }`}
-                            title={`Atleta: ${ath.name} - Dia ${dayNum}/${selectedMonth + 1}`}
-                          >
-                            {status === 'presente' && '✓'}
-                            {status === 'falta' && '✕'}
-                            {status === 'falta_justificada' && '!'}
-                            {status === 'sem_registro' && isScheduled && '·'}
-                          </td>
-                        );
-                      })}
-
-                      {/* Percentage Cell */}
-                      <td className="p-2.5 text-center font-mono font-bold text-xs border-l border-[#1e3a5f]">
-                        <span className={`px-2 py-0.5 rounded-full border ${
-                          stats.percentage >= 85
-                            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                            : stats.percentage >= 70
-                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                            : 'bg-red-500/20 text-red-300 border-red-500/30'
-                        }`}>
-                          {stats.percentage}%
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -1298,87 +1307,95 @@ export const AttendanceManagerTab: React.FC = () => {
             };
 
             return (
-              <div className="overflow-x-auto rounded-xl border border-[#1e3a5f] bg-black/40 shadow-inner">
-                <table className="w-full text-xs text-left border-collapse min-w-[850px]">
-                  <thead>
-                    <tr className="bg-[#071326] border-b border-[#1e3a5f] text-slate-300">
-                      <th className="p-3 sticky left-0 bg-[#071326] z-10 min-w-[200px] font-bold text-white">
-                        Atleta / Classe
-                      </th>
-                      {unifiedChamps.map((champ) => (
-                        <th
-                          key={champ.id}
-                          className="p-2.5 text-center min-w-[170px] font-bold border-l border-white/5 text-[#f3e5ab] relative group bg-[#071326]"
-                        >
-                          <div className="flex items-center justify-between gap-1 mb-1.5">
-                            <span className="text-[10px] text-[#d4af37] font-semibold bg-[#d4af37]/15 px-2 py-0.5 rounded border border-[#d4af37]/30 truncate">
-                              {champ.date}
-                            </span>
-                            <div className="flex items-center gap-1">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenEditChampModal(champ);
-                                }}
-                                className="p-1 rounded bg-white/10 hover:bg-[#d4af37] text-slate-300 hover:text-[#060e1c] transition-colors cursor-pointer"
-                                title="Editar nome, data ou local deste campeonato"
-                                aria-label="Editar campeonato"
-                              >
-                                <Edit2 className="w-3 h-3" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setConfirmDeleteChamp(champ);
-                                }}
-                                className="p-1 rounded bg-white/10 hover:bg-red-500 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                                title="Excluir este campeonato da lista de chamada"
-                                aria-label="Excluir campeonato"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-                          <div className="text-[11px] font-bold text-white leading-tight line-clamp-2" title={champ.title}>
-                            {champ.title}
-                          </div>
-                          <div className="text-[9px] text-slate-400 truncate max-w-[150px] mx-auto mt-1 flex items-center justify-center gap-1">
-                            <MapPin className="w-2.5 h-2.5 text-[#d4af37] shrink-0" />
-                            <span className="truncate">{champ.location}</span>
-                          </div>
-                        </th>
-                      ))}
-                      <th className="p-3 text-center min-w-[100px] font-bold text-[#d4af37] border-l border-[#1e3a5f]">
-                        Disputados
-                      </th>
-                      <th className="p-3 text-center min-w-[100px] font-bold text-amber-300 border-l border-white/5">
-                        Medalhas 🏅
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-white/5">
-                    {athletes.map((ath) => {
-                      let participatedCount = 0;
-                      let medalsCount = 0;
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 sm:hidden">
+                  <span className="flex items-center gap-1 text-[#d4af37]">
+                    <span>↔</span> Arraste para ver todos os campeonatos
+                  </span>
+                  <span>{unifiedChamps.length} competições</span>
+                </div>
 
-                      return (
-                        <tr key={ath.id} className="hover:bg-white/5 transition-colors">
-                          {/* Athlete Sticky Cell */}
-                          <td className="p-2.5 sticky left-0 bg-[#0c1f38] z-10 border-r border-[#1e3a5f]">
-                            <div className="flex items-center gap-2">
-                              <img
-                                src={ath.photoUrl}
-                                alt={ath.name}
-                                className="w-7 h-7 rounded-full object-cover shrink-0 border border-white/10"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="truncate">
-                                <div className="font-bold text-white truncate max-w-[130px]">{ath.name}</div>
-                                <div className="text-[9px] text-[#d4af37] font-mono">
-                                  Classe {ath.paralympicClass || 'S14'}
-                                </div>
+                <div className="overflow-x-auto rounded-xl border border-[#1e3a5f] bg-black/40 shadow-inner touch-pan-x overscroll-x-contain">
+                  <table className="w-full text-xs text-left border-collapse min-w-[650px] sm:min-w-[850px]">
+                    <thead>
+                      <tr className="bg-[#071326] border-b border-[#1e3a5f] text-slate-300">
+                        <th className="p-2 sm:p-3 sticky left-0 bg-[#071326] z-10 min-w-[130px] sm:min-w-[200px] font-bold text-white shadow-[2px_0_6px_-2px_rgba(0,0,0,0.6)]">
+                          Atleta / Classe
+                        </th>
+                        {unifiedChamps.map((champ) => (
+                          <th
+                            key={champ.id}
+                            className="p-2 sm:p-2.5 text-center min-w-[135px] sm:min-w-[170px] font-bold border-l border-white/5 text-[#f3e5ab] relative group bg-[#071326]"
+                          >
+                            <div className="flex items-center justify-between gap-1 mb-1 sm:mb-1.5">
+                              <span className="text-[9px] sm:text-[10px] text-[#d4af37] font-semibold bg-[#d4af37]/15 px-1.5 sm:px-2 py-0.5 rounded border border-[#d4af37]/30 truncate">
+                                {champ.date}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEditChampModal(champ);
+                                  }}
+                                  className="p-1 rounded bg-white/10 hover:bg-[#d4af37] text-slate-300 hover:text-[#060e1c] transition-colors cursor-pointer"
+                                  title="Editar nome, data ou local deste campeonato"
+                                  aria-label="Editar campeonato"
+                                >
+                                  <Edit2 className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setConfirmDeleteChamp(champ);
+                                  }}
+                                  className="p-1 rounded bg-white/10 hover:bg-red-500 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                  title="Excluir este campeonato da lista de chamada"
+                                  aria-label="Excluir campeonato"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            </div>
+                            <div className="text-[10px] sm:text-[11px] font-bold text-white leading-tight line-clamp-2" title={champ.title}>
+                              {champ.title}
+                            </div>
+                            <div className="text-[9px] text-slate-400 truncate max-w-[130px] sm:max-w-[150px] mx-auto mt-1 flex items-center justify-center gap-1">
+                              <MapPin className="w-2.5 h-2.5 text-[#d4af37] shrink-0" />
+                              <span className="truncate">{champ.location}</span>
+                            </div>
+                          </th>
+                        ))}
+                        <th className="p-2 sm:p-3 text-center min-w-[75px] sm:min-w-[100px] font-bold text-[#d4af37] border-l border-[#1e3a5f]">
+                          Disputados
+                        </th>
+                        <th className="p-2 sm:p-3 text-center min-w-[75px] sm:min-w-[100px] font-bold text-amber-300 border-l border-white/5">
+                          Medalhas 🏅
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {athletes.map((ath) => {
+                        let participatedCount = 0;
+                        let medalsCount = 0;
+
+                        return (
+                          <tr key={ath.id} className="hover:bg-white/5 transition-colors">
+                            {/* Athlete Sticky Cell */}
+                            <td className="p-2 sm:p-2.5 sticky left-0 bg-[#0c1f38] z-10 border-r border-[#1e3a5f] shadow-[2px_0_6px_-2px_rgba(0,0,0,0.6)]">
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <img
+                                  src={ath.photoUrl}
+                                  alt={ath.name}
+                                  className="w-6 h-6 sm:w-7 sm:h-7 rounded-full object-cover shrink-0 border border-white/10"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="truncate">
+                                  <div className="font-bold text-white truncate max-w-[90px] sm:max-w-[130px] text-[11px] sm:text-xs">{ath.name}</div>
+                                  <div className="text-[8px] sm:text-[9px] text-[#d4af37] font-mono">
+                                    Classe {ath.paralympicClass || 'S14'}
+                                  </div>
                               </div>
                             </div>
                           </td>
@@ -1444,8 +1461,9 @@ export const AttendanceManagerTab: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-            );
-          })()}
+            </div>
+          );
+        })()}
         </div>
       )}
 
