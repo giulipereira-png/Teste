@@ -5,7 +5,7 @@ import { groupAndRankMetrics, STROKE_OPTIONS } from './swimmingMetricsHelper';
 
 // Instituição
 export const INSTITUTION_INFO = {
-  name: 'ACEDEP - Associação Cultural e Esportiva de Deficientes Paulistas',
+  name: 'ACEDEP - Associação Cultural Especial Paradesportiva Paulista',
   cnpj: '12.579.030/0001-83',
   location: 'Centro Paralímpico Brasileiro (CPB) - Rod. dos Imigrantes, km 11,5 - São Paulo/SP',
   program: 'Programa de Alto Rendimento e Formação - Natação Paralímpica S14 / CBDI / CPB',
@@ -328,7 +328,7 @@ export function generateWordDocument(options: ExportReportOptions): void {
     `;
   } else if (reportType === 'athlete_individual') {
     title = `DOSSIÊ E FICHA INDIVIDUAL DO ATLETA`;
-    subtitle = `${selectedAthlete.name} • Associação Cultural e Esportiva de Deficientes Paulistas`;
+    subtitle = `${selectedAthlete.name} • Associação Cultural Especial Paradesportiva Paulista`;
 
     const { allEventGroups } = groupAndRankMetrics(selectedAthlete.swimmingMetrics || []);
 
@@ -467,7 +467,7 @@ export function generateWordDocument(options: ExportReportOptions): void {
         </div>
 
         <div class="footer-box">
-          <p>ACEDEP - Associação Cultural e Esportiva de Deficientes Paulistas | CNPJ: ${INSTITUTION_INFO.cnpj}</p>
+          <p>ACEDEP - Associação Cultural Especial Paradesportiva Paulista | CNPJ: ${INSTITUTION_INFO.cnpj}</p>
           <p>Relatório gerado eletronicamente para fins cadastrais, de acompanhamento técnico e prestação de contas esportivas.</p>
         </div>
       </body>
@@ -516,7 +516,7 @@ export function generatePdfDocument(options: ExportReportOptions): void {
     docInstance.setFont('helvetica', 'bold');
     docInstance.setFontSize(11);
     docInstance.setTextColor(255, 255, 255);
-    docInstance.text('ACEDEP - ASSOCIAÇÃO CULTURAL E ESPORTIVA DE DEFICIENTES PAULISTAS', 14, 9);
+    docInstance.text('ACEDEP - ASSOCIAÇÃO CULTURAL ESPECIAL PARADESPORTIVA PAULISTA', 14, 9);
 
     // Sub details
     docInstance.setFont('helvetica', 'normal');
@@ -1096,7 +1096,7 @@ export function openPrintableView(options: ExportReportOptions): void {
     const { allEventGroups } = groupAndRankMetrics(selectedAthlete.swimmingMetrics || []);
     bodyContent = `
       <h2>DOSSIÊ E FICHA INDIVIDUAL DO ATLETA: ${selectedAthlete.name.toUpperCase()}</h2>
-      <p class="subtitle">Associação Cultural e Esportiva de Deficientes Paulistas (ACEDEP)</p>
+      <p class="subtitle">Associação Cultural Especial Paradesportiva Paulista (ACEDEP)</p>
       
       <table style="margin-bottom: 20px;">
         <tbody>
@@ -1199,7 +1199,7 @@ export function openPrintableView(options: ExportReportOptions): void {
         ${bodyContent}
 
         <div class="footer">
-          <p>ACEDEP - Associação Cultural e Esportiva de Deficientes Paulistas • CNPJ: ${INSTITUTION_INFO.cnpj}</p>
+          <p>ACEDEP - Associação Cultural Especial Paradesportiva Paulista • CNPJ: ${INSTITUTION_INFO.cnpj}</p>
           <p>Documento oficial emitido eletronicamente para fins cadastrais e de acompanhamento esportivo.</p>
         </div>
 

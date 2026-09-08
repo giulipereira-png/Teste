@@ -58,10 +58,10 @@ export const MemberPortalHeader: React.FC<MemberPortalHeaderProps> = ({
               type="button"
               onClick={onOpenExportModal}
               className="ml-auto px-3 py-1 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/35 border border-[#d4af37]/40 text-[#f3e5ab] text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-              title="Baixar Ficha e Relatórios em PDF ou Word"
+              title="Baixar Ficha e Relatórios em PDF"
             >
               <FileDown className="w-3.5 h-3.5 text-[#d4af37]" />
-              <span>Baixar Relatório (PDF / Word)</span>
+              <span>Baixar Relatório (PDF)</span>
             </button>
           )}
         </div>

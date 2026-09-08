@@ -239,31 +239,11 @@ export const MemberTrainingTab: React.FC<MemberTrainingTabProps> = ({ athlete })
                     selectedYear: new Date().getFullYear(),
                   });
                 }}
-                className="px-2.5 py-1.5 rounded-xl bg-[#d4af37]/15 hover:bg-[#d4af37] text-[#f3e5ab] hover:text-[#060e1c] border border-[#d4af37]/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                title="Baixar Relatório de Presença em PDF"
+                className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                title="Baixar Relatório Oficial de Presença em PDF"
               >
                 <FileDown className="w-3.5 h-3.5" />
-                <span>PDF</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  exportReport({
-                    reportType: 'attendance_monthly',
-                    format: 'word',
-                    athletes: [athlete],
-                    attendanceSessions,
-                    selectedAthleteId: athlete.id,
-                    selectedMonth: filterMonth !== 'all' ? Number(filterMonth) : new Date().getMonth(),
-                    selectedYear: new Date().getFullYear(),
-                  });
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500 text-blue-300 hover:text-white border border-blue-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                title="Baixar Relatório de Presença em Word (.doc)"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                <span>Word</span>
+                <span>Baixar em PDF</span>
               </button>
             </div>
           </div>

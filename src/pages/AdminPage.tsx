@@ -108,7 +108,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToHome }) => {
 
       {/* Footer info */}
       <div className="max-w-6xl mx-auto w-full text-center text-[11px] text-slate-500 border-t border-white/5 pt-4">
-        ACEDEP • Associação Cultural e Esportiva de Deficientes Paulistas | Centro Paralímpico Brasileiro
+        ACEDEP • Associação Cultural Especial Paradesportiva Paulista | Centro Paralímpico Brasileiro
       </div>
     </div>
   );

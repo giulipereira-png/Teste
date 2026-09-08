@@ -1124,7 +1124,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                     setExportModalOpen(true);
                   }}
                   className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
-                  title="Exportar dados e relatórios em PDF ou Word"
+                  title="Exportar dados e relatórios em PDF"
                 >
                   <FileDown className="w-3.5 h-3.5 text-[#d4af37]" />
                   <span className="hidden sm:inline">Exportar Relatórios</span>
@@ -1962,7 +1962,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                         setExportModalOpen(true);
                       }}
                       className="px-3 py-1.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#f3e5ab] hover:text-[#060e1c] border border-[#d4af37]/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                      title="Exportar Lista Geral de Atletas em PDF ou Word"
+                      title="Exportar Lista Geral de Atletas em PDF"
                     >
                       <FileDown className="w-3.5 h-3.5" />
                       <span>Exportar Quadro de Atletas</span>
@@ -2742,7 +2742,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                                   setExportModalOpen(true);
                                 }}
                                 className="px-3 py-1 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#f3e5ab] hover:text-[#060e1c] border border-[#d4af37]/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                                title="Exportar tempos e ranking em PDF ou Word"
+                                title="Exportar tempos e ranking em PDF"
                               >
                                 <FileDown className="w-3.5 h-3.5" />
                                 <span>Exportar Ranking</span>

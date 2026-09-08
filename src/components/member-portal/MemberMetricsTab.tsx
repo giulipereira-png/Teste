@@ -81,28 +81,11 @@ export const MemberMetricsTab: React.FC<MemberMetricsTabProps> = ({ athlete }) =
                     selectedAthleteId: athlete.id,
                   });
                 }}
-                className="px-3 py-2 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#f3e5ab] hover:text-[#060e1c] border border-[#d4af37]/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                className="px-3 py-2 rounded-xl bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
                 title="Baixar Relatório Completo de Tempos & RP em PDF"
               >
                 <FileDown className="w-3.5 h-3.5" />
-                <span>PDF</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  exportReport({
-                    reportType: 'athlete_individual',
-                    format: 'word',
-                    athletes: [athlete],
-                    selectedAthleteId: athlete.id,
-                  });
-                }}
-                className="px-3 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500 text-blue-300 hover:text-white border border-blue-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
-                title="Baixar Relatório de Tempos & RP em Word (.doc)"
-              >
-                <FileDown className="w-3.5 h-3.5" />
-                <span>Word</span>
+                <span>Baixar em PDF</span>
               </button>
             </div>
           </div>

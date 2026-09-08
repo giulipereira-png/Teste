@@ -95,7 +95,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
                 type="button"
                 onClick={() => setExportModalOpen(true)}
                 className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer"
-                title="Baixar Relatório em PDF ou Word"
+                title="Baixar Relatório em PDF"
               >
                 <FileDown className="w-3.5 h-3.5 text-[#d4af37]" />
                 <span className="hidden sm:inline">Relatório</span>

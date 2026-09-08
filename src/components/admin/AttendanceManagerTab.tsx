@@ -580,7 +580,7 @@ export const AttendanceManagerTab: React.FC = () => {
                 setExportModalOpen(true);
               }}
               className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#d4af37] to-[#b8952b] text-[#060e1c] font-bold text-xs shadow-md hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
-              title="Exportar Lista de Chamada e Frequência em PDF ou Word"
+              title="Exportar Lista de Chamada e Frequência em PDF"
             >
               <FileDown className="w-3.5 h-3.5" />
               <span>Exportar Chamada</span>

@@ -248,10 +248,10 @@ export const Logo: React.FC<LogoProps> = ({
       {showTagline && (
         <div className="flex flex-col justify-center text-left leading-tight">
           <span className={`text-xs font-semibold tracking-wider uppercase ${isLightBg ? 'text-slate-600' : 'text-[#f3e5ab]'}`}>
-            Associação Cultural e Esportiva
+            Associação Cultural Especial
           </span>
           <span className={`text-[10px] tracking-normal font-medium ${isLightBg ? 'text-slate-500' : 'text-slate-300'}`}>
-            de Deficientes Paulistas • Desde 1990
+            Paradesportiva Paulista • Desde 1990
           </span>
         </div>
       )}

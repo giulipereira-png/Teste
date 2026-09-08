@@ -88,8 +88,6 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
       setSuccessFeedback(
         format === 'pdf' 
           ? 'Relatório em PDF gerado e baixado com sucesso!'
-          : format === 'word'
-          ? 'Documento Word (.doc) baixado com sucesso!'
           : 'Janela de impressão e visualização aberta com sucesso!'
       );
 
@@ -117,8 +115,8 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base font-bold text-white font-serif flex items-center gap-2 truncate">
                 <span className="truncate">Exportar Relatórios</span>
-                <span className="px-2 py-0.5 rounded-full bg-[#d4af37]/20 text-[#f3e5ab] text-[10px] font-mono font-bold shrink-0">
-                  PDF & Word
+                <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-mono font-bold shrink-0">
+                  Apenas em PDF
                 </span>
               </h3>
               <p className="text-[11px] sm:text-xs text-slate-400 truncate">
@@ -464,35 +462,25 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
             )}
           </div>
 
-          {/* 3. BOTÕES DE EXPORTAÇÃO (PDF, WORD, IMPRIMIR) */}
+          {/* 3. BOTÕES DE EXPORTAÇÃO (APENAS PDF E IMPRIMIR) */}
           <div className="pt-2">
             <label className="block text-slate-300 font-bold mb-2 uppercase tracking-wider text-[11px]">
-              3. Escolha o Formato de Baixa / Impressão
+              3. Baixar Relatório Oficial (Apenas em PDF)
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* PDF Button */}
               <button
                 type="button"
                 disabled={isExporting}
                 onClick={() => handleExport('pdf')}
-                className="p-3.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white font-bold transition-all shadow-lg hover:shadow-red-600/30 flex flex-col items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="p-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-bold transition-all shadow-lg hover:shadow-red-600/30 flex flex-col items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <FileDown className="w-5 h-5" />
-                <span className="text-sm">Baixar em PDF</span>
-                <span className="text-[10px] text-red-200 font-normal">Arquivo .pdf oficial</span>
-              </button>
-
-              {/* Word Button */}
-              <button
-                type="button"
-                disabled={isExporting}
-                onClick={() => handleExport('word')}
-                className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-800 hover:from-blue-600 hover:to-indigo-700 text-white font-bold transition-all shadow-lg hover:shadow-blue-700/30 flex flex-col items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                <FileText className="w-5 h-5" />
-                <span className="text-sm">Baixar em Word</span>
-                <span className="text-[10px] text-blue-200 font-normal">Arquivo .doc editável</span>
+                <div className="flex items-center gap-2">
+                  <FileDown className="w-5 h-5" />
+                  <span className="text-sm sm:text-base font-bold">Baixar Relatório em PDF</span>
+                </div>
+                <span className="text-[10px] sm:text-xs text-red-200 font-normal">Documento oficial timbrado ACEDEP (.pdf)</span>
               </button>
 
               {/* Print / Save PDF Button */}
@@ -500,11 +488,13 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                 type="button"
                 disabled={isExporting}
                 onClick={() => handleExport('print')}
-                className="p-3.5 rounded-2xl bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-600 hover:to-slate-700 text-white font-bold transition-all shadow-lg flex flex-col items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                className="p-4 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 text-white font-bold transition-all shadow-lg border border-white/10 flex flex-col items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                <Printer className="w-5 h-5" />
-                <span className="text-sm">Imprimir / Visualizar</span>
-                <span className="text-[10px] text-slate-300 font-normal">Diálogo de impressão</span>
+                <div className="flex items-center gap-2">
+                  <Printer className="w-5 h-5 text-[#d4af37]" />
+                  <span className="text-sm sm:text-base font-bold">Imprimir / Visualizar</span>
+                </div>
+                <span className="text-[10px] sm:text-xs text-slate-300 font-normal">Pré-visualização e impressão pelo navegador</span>
               </button>
             </div>
           </div>
