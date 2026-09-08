@@ -14,7 +14,11 @@ import {
   User, 
   ShieldAlert,
   Sparkles,
-  Clock
+  Clock,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Copy
 } from 'lucide-react';
 import { usePhotos } from '../../context/PhotosContext';
 import { AdminUser } from '../../types';
@@ -26,7 +30,8 @@ export const AdminUsersManagerTab: React.FC = () => {
     addAdminUser, 
     updateAdminUser, 
     deleteAdminUser, 
-    updateAdminPin 
+    updateAdminPin,
+    resetAdminUserPassword
   } = usePhotos();
 
   // New Professor Form State
@@ -36,9 +41,11 @@ export const AdminUsersManagerTab: React.FC = () => {
   const [newRole, setNewRole] = useState<'Professor' | 'Coordenador Técnico' | 'Treinador' | 'Super Admin'>('Professor');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [showNewPin, setShowNewPin] = useState(false);
   const [isSavingAdmin, setIsSavingAdmin] = useState(false);
   const [adminError, setAdminError] = useState('');
   const [adminSuccess, setAdminSuccess] = useState('');
+  const [duplicateUser, setDuplicateUser] = useState<AdminUser | null>(null);
 
   // Edit Admin/Professor State
   const [editingAdminId, setEditingAdminId] = useState<string | null>(null);
@@ -46,6 +53,14 @@ export const AdminUsersManagerTab: React.FC = () => {
   const [editEmail, setEditEmail] = useState('');
   const [editRole, setEditRole] = useState<string>('');
   const [editPin, setEditPin] = useState('');
+  const [showEditPin, setShowEditPin] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Card view state
+  const [revealedPins, setRevealedPins] = useState<Record<string, boolean>>({});
+  const togglePinReveal = (id: string) => {
+    setRevealedPins(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Master PIN change form
   const [masterPin, setMasterPin] = useState('');
@@ -58,6 +73,7 @@ export const AdminUsersManagerTab: React.FC = () => {
     e.preventDefault();
     setAdminError('');
     setAdminSuccess('');
+    setDuplicateUser(null);
 
     if (!newName.trim() || !newEmail.trim()) {
       setAdminError('Preencha o nome e o e-mail do professor.');
@@ -65,7 +81,7 @@ export const AdminUsersManagerTab: React.FC = () => {
     }
 
     if (newPin.trim().length < 4) {
-      setAdminError('A senha/PIN deve ter no mínimo 4 dígitos.');
+      setAdminError('A senha/PIN deve ter no mínimo 4 dígitos ou caracteres.');
       return;
     }
 
@@ -75,11 +91,12 @@ export const AdminUsersManagerTab: React.FC = () => {
     }
 
     // Check if email already exists
-    const emailExists = adminUsers.some(
-      (a) => a.email.toLowerCase() === newEmail.trim().toLowerCase()
+    const existing = adminUsers.find(
+      (a) => a.email.toLowerCase().trim() === newEmail.trim().toLowerCase()
     );
-    if (emailExists) {
-      setAdminError('Já existe um usuário cadastrado com este e-mail.');
+    if (existing) {
+      setDuplicateUser(existing);
+      setAdminError(`Já existe um perfil cadastrado com este e-mail (${newEmail.trim()}). Você pode editar os dados ou alterar a senha dele.`);
       return;
     }
 
@@ -94,7 +111,7 @@ export const AdminUsersManagerTab: React.FC = () => {
     setIsSavingAdmin(false);
 
     if (success) {
-      setAdminSuccess(`Perfil de professor "${newName.trim()}" cadastrado com sucesso com PIN de acesso!`);
+      setAdminSuccess(`Perfil de professor "${newName.trim()}" cadastrado com sucesso! A senha foi salva.`);
       setNewName('');
       setNewEmail('');
       setNewPin('');
@@ -102,7 +119,7 @@ export const AdminUsersManagerTab: React.FC = () => {
       setShowAddForm(false);
       setTimeout(() => setAdminSuccess(''), 5000);
     } else {
-      setAdminError('Erro ao gravar perfil. Tente novamente.');
+      setAdminError('Erro ao gravar perfil no banco de dados. Tente novamente.');
     }
   };
 
@@ -112,21 +129,31 @@ export const AdminUsersManagerTab: React.FC = () => {
     setEditEmail(admin.email);
     setEditRole(admin.role);
     setEditPin(admin.pin || '');
+    setShowEditPin(false);
   };
 
   const handleSaveEdit = async (id: string) => {
     if (!editName.trim() || !editEmail.trim()) return;
 
-    await updateAdminUser(id, {
+    setIsSavingEdit(true);
+    const existing = adminUsers.find((a) => a.id === id);
+    const pinToSave = editPin.trim() ? editPin.trim() : (existing?.pin || '1990');
+
+    const ok = await updateAdminUser(id, {
       name: editName.trim(),
       email: editEmail.trim().toLowerCase(),
       role: editRole,
-      pin: editPin.trim() || undefined,
+      pin: pinToSave,
     });
+    setIsSavingEdit(false);
 
-    setEditingAdminId(null);
-    setAdminSuccess('Dados do perfil atualizados com sucesso!');
-    setTimeout(() => setAdminSuccess(''), 4000);
+    if (ok) {
+      setEditingAdminId(null);
+      setAdminSuccess('Perfil e senha atualizados com sucesso no sistema!');
+      setTimeout(() => setAdminSuccess(''), 4000);
+    } else {
+      setAdminError('Erro ao atualizar os dados do perfil.');
+    }
   };
 
   const handleToggleStatus = async (admin: AdminUser) => {
@@ -231,9 +258,25 @@ export const AdminUsersManagerTab: React.FC = () => {
       )}
 
       {adminError && (
-        <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs sm:text-sm font-medium flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
-          <span>{adminError}</span>
+        <div className="p-4 rounded-xl bg-red-500/15 border border-red-500/40 text-red-300 text-xs sm:text-sm font-medium flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+            <span>{adminError}</span>
+          </div>
+          {duplicateUser && (
+            <button
+              type="button"
+              onClick={() => {
+                handleStartEdit(duplicateUser);
+                setShowAddForm(false);
+                setDuplicateUser(null);
+                setAdminError('');
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-[#d4af37] hover:bg-[#e5c058] text-[#060e1c] font-bold text-xs cursor-pointer shrink-0 self-start sm:self-auto transition-all shadow"
+            >
+              Abrir Edição de {duplicateUser.name}
+            </button>
+          )}
         </div>
       )}
 
@@ -303,13 +346,20 @@ export const AdminUsersManagerTab: React.FC = () => {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    type="password"
+                    type={showNewPin ? "text" : "password"}
                     value={newPin}
                     onChange={(e) => setNewPin(e.target.value)}
                     placeholder="Mínimo 4 dígitos"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-black/50 border border-[#1e3a5f] text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                    className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-black/50 border border-[#1e3a5f] text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#d4af37] font-mono"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPin(!showNewPin)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    {showNewPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
               </div>
 
@@ -320,11 +370,11 @@ export const AdminUsersManagerTab: React.FC = () => {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
-                    type="password"
+                    type={showNewPin ? "text" : "password"}
                     value={confirmPin}
                     onChange={(e) => setConfirmPin(e.target.value)}
                     placeholder="Repita a senha"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-black/50 border border-[#1e3a5f] text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-black/50 border border-[#1e3a5f] text-white text-xs placeholder-slate-500 focus:outline-none focus:border-[#d4af37] font-mono"
                     required
                   />
                 </div>
@@ -343,9 +393,16 @@ export const AdminUsersManagerTab: React.FC = () => {
             <button
               type="submit"
               disabled={isSavingAdmin}
-              className="px-5 py-2 rounded-xl bg-[#d4af37] hover:bg-[#e5c058] text-[#060e1c] font-bold text-xs shadow-lg cursor-pointer disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-[#d4af37] hover:bg-[#e5c058] text-[#060e1c] font-bold text-xs shadow-lg cursor-pointer disabled:opacity-50 flex items-center gap-2"
             >
-              {isSavingAdmin ? 'Gravando...' : 'Cadastrar Perfil de Professor'}
+              {isSavingAdmin ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Gravando Perfil...</span>
+                </>
+              ) : (
+                <span>Cadastrar Perfil de Professor</span>
+              )}
             </button>
           </div>
         </form>
@@ -395,7 +452,7 @@ export const AdminUsersManagerTab: React.FC = () => {
                         className="w-full px-3 py-1.5 rounded-lg bg-black/50 border border-[#1e3a5f] text-white text-xs"
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[11px] font-bold text-slate-400 mb-1">Cargo / Função:</label>
                         <select
@@ -409,29 +466,51 @@ export const AdminUsersManagerTab: React.FC = () => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-400 mb-1">Nova Senha / PIN:</label>
-                        <input
-                          type="password"
-                          value={editPin}
-                          onChange={(e) => setEditPin(e.target.value)}
-                          placeholder="Manter atual se vazio"
-                          className="w-full px-3 py-1.5 rounded-lg bg-black/50 border border-[#1e3a5f] text-white text-xs"
-                        />
+                        <label className="block text-[11px] font-bold text-slate-400 mb-1">
+                          Nova Senha / PIN:
+                          <span className="text-slate-500 font-normal ml-1">
+                            (Atual: {admin.pin || '1990'})
+                          </span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type={showEditPin ? "text" : "password"}
+                            value={editPin}
+                            onChange={(e) => setEditPin(e.target.value)}
+                            placeholder="Manter atual se vazio"
+                            className="w-full px-3 py-1.5 pr-8 rounded-lg bg-black/50 border border-[#1e3a5f] text-white text-xs font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowEditPin(!showEditPin)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                          >
+                            {showEditPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-2">
                       <button
                         onClick={() => setEditingAdminId(null)}
-                        className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs"
+                        className="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button
+                        disabled={isSavingEdit}
                         onClick={() => handleSaveEdit(admin.id)}
-                        className="px-3 py-1 rounded-lg bg-[#d4af37] text-black font-bold text-xs"
+                        className="px-4 py-1.5 rounded-lg bg-[#d4af37] hover:bg-[#e5c058] text-[#060e1c] font-bold text-xs cursor-pointer disabled:opacity-50 flex items-center gap-1.5 transition-all shadow"
                       >
-                        Salvar Alterações
+                        {isSavingEdit ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Salvando...</span>
+                          </>
+                        ) : (
+                          <span>Salvar Alterações</span>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -471,6 +550,34 @@ export const AdminUsersManagerTab: React.FC = () => {
                         <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[#d4af37]">
                           <ShieldCheck className="w-5 h-5" />
                         </div>
+                      </div>
+
+                      {/* Password / Access credentials box */}
+                      <div className="mt-3 p-2.5 rounded-xl bg-black/40 border border-[#1e3a5f]/80 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <KeyRound className="w-3.5 h-3.5 text-[#d4af37]" />
+                          <span className="text-xs text-slate-400 font-medium">Senha:</span>
+                          <span className="font-mono text-xs font-bold text-white tracking-wider px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                            {revealedPins[admin.id] ? (admin.pin || '1990') : '••••••••'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => togglePinReveal(admin.id)}
+                            className="p-1 rounded text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            title={revealedPins[admin.id] ? "Ocultar senha" : "Ver senha"}
+                          >
+                            {revealedPins[admin.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleStartEdit(admin)}
+                          className="text-[11px] font-semibold text-[#d4af37] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Alterar Senha</span>
+                        </button>
                       </div>
 
                       {admin.lastLogin && (

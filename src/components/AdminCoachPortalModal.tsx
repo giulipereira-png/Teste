@@ -124,7 +124,8 @@ export const AdminCoachPortalModal: React.FC = () => {
     resetPhotoToDefault,
     addGalleryPhoto,
     deleteGalleryPhoto,
-    updateAdminPin
+    updateAdminPin,
+    resetAdminUserPassword
   } = usePhotos();
 
   const isSuperAdmin = currentAdminProfile?.email === 'giuli.pereira@gmail.com' || currentAdminProfile?.role === 'Super Admin';
@@ -151,6 +152,15 @@ export const AdminCoachPortalModal: React.FC = () => {
   const [pinError, setPinError] = useState(false);
   const [loginErrorMessage, setLoginErrorMessage] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Reset Professor Password State
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetNewPin, setResetNewPin] = useState('');
+  const [resetMasterPin, setResetMasterPin] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   // Search & filter in athletes list
   const [athleteSearchTerm, setAthleteSearchTerm] = useState('');
@@ -325,6 +335,51 @@ export const AdminCoachPortalModal: React.FC = () => {
       } catch {}
       setPinInput('');
       setLoginErrorMessage('');
+    }
+  };
+
+  const handleExecuteResetPassword = async () => {
+    setResetError('');
+    setResetSuccess('');
+    const cleanTargetEmail = resetEmail.trim().toLowerCase();
+    const cleanNewPin = resetNewPin.trim();
+    const cleanAuthPin = resetMasterPin.trim();
+
+    if (!cleanTargetEmail) {
+      setResetError('Informe o e-mail do professor.');
+      return;
+    }
+
+    if (!cleanNewPin || cleanNewPin.length < 4) {
+      setResetError('A nova senha deve ter no mínimo 4 dígitos ou caracteres.');
+      return;
+    }
+
+    if (!cleanAuthPin) {
+      setResetError('Informe a Senha Mestre da Coordenação para autorizar.');
+      return;
+    }
+
+    const validMasterPins = ['1990', 'acedep1990', '2026', 'admin1990'];
+    if (!validMasterPins.includes(cleanAuthPin)) {
+      setResetError('Senha Mestre da Coordenação incorreta (tente 1990).');
+      return;
+    }
+
+    setIsResetting(true);
+    const ok = await resetAdminUserPassword(cleanTargetEmail, cleanNewPin);
+    setIsResetting(false);
+
+    if (ok) {
+      setResetSuccess('Senha alterada com sucesso! Conectando ao painel...');
+      setLoginEmailInput(cleanTargetEmail);
+      setPinInput(cleanNewPin);
+      setTimeout(async () => {
+        await loginAdmin(cleanNewPin, cleanTargetEmail);
+        setShowResetPassword(false);
+      }, 700);
+    } else {
+      setResetError('E-mail não encontrado entre os professores ou falha ao salvar.');
     }
   };
 
@@ -1198,34 +1253,103 @@ export const AdminCoachPortalModal: React.FC = () => {
                   )}
                 </button>
 
-                {/* Quick Select Profile Pills for easier mobile login */}
-                {adminUsers && adminUsers.length > 0 && (
-                  <div className="pt-2 border-t border-white/5 text-left">
-                    <p className="text-[11px] font-semibold text-slate-400 mb-2">
-                      Professores & Administradores cadastrados:
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {adminUsers.map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          onClick={() => {
-                            setLoginEmailInput(u.email);
-                            setPinError(false);
-                            setLoginErrorMessage('');
-                          }}
-                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
-                            loginEmailInput.toLowerCase() === u.email.toLowerCase()
-                              ? 'bg-[#d4af37]/20 text-[#f3e5ab] border-[#d4af37]'
-                              : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
-                          }`}
-                        >
-                          <span className={`w-2 h-2 rounded-full ${u.role === 'Professor' ? 'bg-cyan-400' : 'bg-[#d4af37]'}`} />
-                          <span className="font-medium">{u.name}</span>
-                          <span className="text-[9px] text-slate-400">({u.role})</span>
-                        </button>
-                      ))}
+                {/* Option to reset or change professor password */}
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowResetPassword(!showResetPassword);
+                      setResetEmail(loginEmailInput || '');
+                      setResetSuccess('');
+                      setResetError('');
+                    }}
+                    className="text-xs text-cyan-400 hover:text-cyan-300 underline cursor-pointer transition-colors"
+                  >
+                    {showResetPassword ? 'Fechar redefinição de senha' : 'Esqueceu ou precisa redefinir a senha do professor?'}
+                  </button>
+                </div>
+
+                {showResetPassword && (
+                  <div className="p-4 rounded-xl bg-slate-900/95 border border-cyan-500/30 text-left space-y-3 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+                        Redefinição de Senha do Professor
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowResetPassword(false)}
+                        className="text-slate-400 hover:text-white cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
+                    <p className="text-[11px] text-slate-300 leading-snug">
+                      Defina a nova senha do professor. Para autorizar a alteração, informe a Senha Mestre da Coordenação (1990).
+                    </p>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">E-mail do Professor:</label>
+                      <input
+                        type="email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                        placeholder="ex: giulips19@hotmail.com"
+                        className="w-full px-3 py-2 rounded-lg bg-black/60 border border-slate-700 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Nova Senha Desejada:</label>
+                      <input
+                        type="text"
+                        value={resetNewPin}
+                        onChange={(e) => setResetNewPin(e.target.value)}
+                        placeholder="Digite a nova senha (mínimo 4 caracteres)..."
+                        className="w-full px-3 py-2 rounded-lg bg-black/60 border border-slate-700 text-white text-xs font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase text-slate-400 mb-1">Senha Mestre da Coordenação (Autorização):</label>
+                      <input
+                        type="password"
+                        value={resetMasterPin}
+                        onChange={(e) => setResetMasterPin(e.target.value)}
+                        placeholder="Digite 1990..."
+                        className="w-full px-3 py-2 rounded-lg bg-black/60 border border-slate-700 text-white text-xs font-mono placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                      />
+                    </div>
+
+                    {resetError && (
+                      <div className="p-2.5 rounded-lg bg-red-500/20 border border-red-500/30 text-[11px] text-red-300 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{resetError}</span>
+                      </div>
+                    )}
+
+                    {resetSuccess && (
+                      <div className="p-2.5 rounded-lg bg-emerald-500/20 border border-emerald-500/30 text-[11px] text-emerald-300 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>{resetSuccess}</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={isResetting || !resetEmail.trim() || !resetNewPin.trim() || !resetMasterPin.trim()}
+                      onClick={handleExecuteResetPassword}
+                      className="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md flex items-center justify-center gap-2"
+                    >
+                      {isResetting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          <span>Atualizando senha no sistema...</span>
+                        </>
+                      ) : (
+                        <span>Salvar Nova Senha e Conectar</span>
+                      )}
+                    </button>
                   </div>
                 )}
               </form>
