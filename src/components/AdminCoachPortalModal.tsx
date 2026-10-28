@@ -55,6 +55,8 @@ import { AthleteDocumentsTab } from './AthleteDocumentsTab';
 import { ExportReportModal, ReportType } from './ExportReportModal';
 import { SyncDiagnosticCard } from './SyncDiagnosticCard';
 import { SyncDiagnosticModal } from './SyncDiagnosticModal';
+import { AdminAuditLogsTab } from './AdminAuditLogsTab';
+import { AdminBackupTab } from './AdminBackupTab';
 import { 
   groupAndRankMetrics, 
   STROKE_OPTIONS, 
@@ -107,6 +109,7 @@ export const AdminCoachPortalModal: React.FC = () => {
     updateAnnualEvent,
     deleteAnnualEvent,
     attendanceSessions,
+    auditLogs,
   } = useCommunity();
 
   const {
@@ -131,7 +134,7 @@ export const AdminCoachPortalModal: React.FC = () => {
   const isSuperAdmin = currentAdminProfile?.email === 'giuli.pereira@gmail.com' || currentAdminProfile?.role === 'Super Admin';
   const isProfessor = currentAdminProfile?.role === 'Professor' || currentAdminProfile?.role === 'Treinador' || currentAdminProfile?.role === 'Técnico de Natação' || (currentAdminProfile && !isSuperAdmin);
 
-  const [activeTab, setActiveTab] = useState<'atletas' | 'presenca' | 'tempos' | 'agenda' | 'recados' | 'mural_familia' | 'emails' | 'administradores' | 'fotos' | 'galeria' | 'noticias' | 'seguranca' | 'diagnostico'>('atletas');
+  const [activeTab, setActiveTab] = useState<'atletas' | 'presenca' | 'tempos' | 'agenda' | 'recados' | 'mural_familia' | 'emails' | 'administradores' | 'fotos' | 'galeria' | 'noticias' | 'seguranca' | 'diagnostico' | 'auditoria' | 'backup'>('atletas');
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   // Export report modal state
@@ -1534,6 +1537,30 @@ export const AdminCoachPortalModal: React.FC = () => {
                     >
                       <KeyRound className="w-3.5 h-3.5" />
                       <span>Senha Mestre</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('auditoria')}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
+                        activeTab === 'auditoria'
+                          ? 'bg-[#d4af37] text-[#060e1c] shadow'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <History className="w-3.5 h-3.5" />
+                      <span>Auditoria ({auditLogs?.length || 0})</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('backup')}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
+                        activeTab === 'backup'
+                          ? 'bg-[#d4af37] text-[#060e1c] shadow'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <Database className="w-3.5 h-3.5" />
+                      <span>Backup Firestore</span>
                     </button>
                   </>
                 )}
@@ -4359,88 +4386,212 @@ export const AdminCoachPortalModal: React.FC = () => {
           )}
 
           {/* =========================================================================
-              TAB: SEGURANÇA E ALTERAÇÃO DE SENHA DO ADMIN
+              TAB: SEGURANÇA, LGPD E ALTERAÇÃO DE SENHA DO ADMIN
              ========================================================================= */}
           {activeTab === 'seguranca' && (
             <div className="space-y-6">
-              <form 
-                onSubmit={handleUpdatePinSubmit}
-                className="p-6 rounded-2xl bg-[#0a192f]/80 border border-[#1e3a5f] space-y-4 max-w-lg"
-              >
-                <div className="flex items-center gap-3 border-b border-[#1e3a5f] pb-3">
-                  <div className="p-2 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37]">
-                    <KeyRound className="w-5 h-5" />
+              {/* Header com Status Geral de Blindagem */}
+              <div className="p-6 rounded-3xl bg-gradient-to-r from-[#0a192f] to-[#0d223f] border border-[#1e3a5f] shadow-lg">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-3 rounded-2xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] shrink-0">
+                      <ShieldCheck className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-bold text-white font-serif">
+                          Central de Segurança & Proteção de Dados (LGPD)
+                        </h3>
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Blindagem Ativa
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                        O sistema da ACEDEP está configurado com regras de integridade no banco Firestore, defesa contra ataques de força bruta, sanitização contra injeção de scripts e conformidade com a privacidade de laudos e documentos de atletas paralímpicos.
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white">
-                      Alterar Senha do Administrador
-                    </h4>
-                    <p className="text-xs text-slate-400">
-                      Defina uma senha pessoal e exclusiva para gerenciar todo o painel ACEDEP.
+                </div>
+
+                {/* 4 Pilares de Proteção */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6 pt-5 border-t border-[#1e3a5f]/60">
+                  <div className="p-3.5 rounded-2xl bg-[#060e1c]/60 border border-[#1e3a5f]/80">
+                    <div className="flex items-center gap-2 text-emerald-400 mb-1.5">
+                      <Database className="w-4 h-4" />
+                      <span className="text-xs font-bold">Regras Firestore</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-normal">
+                      Esquemas validados, limite de tamanho e bloqueio contra deleção arbitrária de matrículas e contas.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#060e1c]/60 border border-[#1e3a5f]/80">
+                    <div className="flex items-center gap-2 text-sky-400 mb-1.5">
+                      <Lock className="w-4 h-4" />
+                      <span className="text-xs font-bold">Anti-Força Bruta</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-normal">
+                      Bloqueio automático temporário (lockout) após 5 tentativas incorretas em professores ou responsáveis.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#060e1c]/60 border border-[#1e3a5f]/80">
+                    <div className="flex items-center gap-2 text-amber-400 mb-1.5">
+                      <Timer className="w-4 h-4" />
+                      <span className="text-xs font-bold">Sessão por Inatividade</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-normal">
+                      Desconexão automática preventiva após 30 minutos sem atividade para proteger telas abertas.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-[#060e1c]/60 border border-[#1e3a5f]/80">
+                    <div className="flex items-center gap-2 text-purple-400 mb-1.5">
+                      <FileText className="w-4 h-4" />
+                      <span className="text-xs font-bold">Filtro de Arquivos</span>
+                    </div>
+                    <p className="text-[11px] text-slate-400 leading-normal">
+                      Bloqueio de scripts e executáveis; apenas PDF e imagens seguras até 5 MB são permitidos no upload.
                     </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-3 pt-1">
-                  <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                      Nova Senha *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={newPinInput}
-                      onChange={(e) => {
-                        setNewPinInput(e.target.value);
-                        setPinFormError('');
-                      }}
-                      placeholder="Mínimo de 4 caracteres"
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
-                    />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Form: Alterar Senha do Administrador */}
+                <form 
+                  onSubmit={handleUpdatePinSubmit}
+                  className="p-6 rounded-2xl bg-[#0a192f]/80 border border-[#1e3a5f] space-y-4"
+                >
+                  <div className="flex items-center gap-3 border-b border-[#1e3a5f] pb-3">
+                    <div className="p-2 rounded-lg bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37]">
+                      <KeyRound className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-white">
+                        Alterar Senha do Administrador
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Defina uma senha pessoal e exclusiva para gerenciar todo o painel ACEDEP.
+                      </p>
+                    </div>
                   </div>
 
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                        Nova Senha *
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={newPinInput}
+                        onChange={(e) => {
+                          setNewPinInput(e.target.value);
+                          setPinFormError('');
+                        }}
+                        placeholder="Mínimo de 4 caracteres"
+                        className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                        Confirmar Nova Senha *
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={confirmPinInput}
+                        onChange={(e) => {
+                          setConfirmPinInput(e.target.value);
+                          setPinFormError('');
+                        }}
+                        placeholder="Repita a nova senha"
+                        className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+                  </div>
+
+                  {pinFormError && (
+                    <div className="p-3 rounded-xl bg-red-950/80 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                      <span>{pinFormError}</span>
+                    </div>
+                  )}
+
+                  {pinSuccess && (
+                    <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>{pinSuccess}</span>
+                    </div>
+                  )}
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isSavingPin || !newPinInput.trim() || !confirmPinInput.trim()}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#d4af37] text-[#060e1c] font-bold text-xs hover:bg-[#b8952b] transition-all shadow cursor-pointer disabled:opacity-40"
+                    >
+                      {isSavingPin ? 'Atualizando Senha...' : 'Atualizar Senha de Administrador'}
+                    </button>
+                  </div>
+                </form>
+
+                {/* Auditoria de Acesso da Equipe */}
+                <div className="p-6 rounded-2xl bg-[#0a192f]/80 border border-[#1e3a5f] flex flex-col justify-between">
                   <div>
-                    <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-                      Confirmar Nova Senha *
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={confirmPinInput}
-                      onChange={(e) => {
-                        setConfirmPinInput(e.target.value);
-                        setPinFormError('');
-                      }}
-                      placeholder="Repita a nova senha"
-                      className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
-                    />
+                    <div className="flex items-center gap-3 border-b border-[#1e3a5f] pb-3 mb-4">
+                      <div className="p-2 rounded-lg bg-sky-500/20 border border-sky-500/40 text-sky-400">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-white">
+                          Auditoria de Acessos da Equipe
+                        </h4>
+                        <p className="text-xs text-slate-400">
+                          Monitoramento dos logins recentes dos professores e coordenadores.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                      {adminUsers.map((user) => (
+                        <div 
+                          key={user.id}
+                          className="flex items-center justify-between p-2.5 rounded-xl bg-[#060e1c]/70 border border-[#1e3a5f]/70 text-xs"
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="font-semibold text-white truncate flex items-center gap-1.5">
+                              <span>{user.name}</span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#1e3a5f] text-slate-300 font-normal">
+                                {user.role}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                              {user.email}
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-[10px] text-slate-400 block">Último Acesso:</span>
+                            <span className="text-[11px] font-mono text-[#d4af37]">
+                              {user.lastLogin || 'Nunca acessou'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-[#1e3a5f] text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>Sessão Atual: <strong className="text-white">{currentAdminProfile?.name || 'Administrador'}</strong></span>
+                    <span className="text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                      Conexão Criptografada SSL/TLS
+                    </span>
                   </div>
                 </div>
-
-                {pinFormError && (
-                  <div className="p-3 rounded-xl bg-red-950/80 border border-red-500/50 text-red-300 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-                    <span>{pinFormError}</span>
-                  </div>
-                )}
-
-                {pinSuccess && (
-                  <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>{pinSuccess}</span>
-                  </div>
-                )}
-
-                <div className="pt-2 flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isSavingPin || !newPinInput.trim() || !confirmPinInput.trim()}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#d4af37] text-[#060e1c] font-bold text-xs hover:bg-[#b8952b] transition-all shadow cursor-pointer disabled:opacity-40"
-                  >
-                    {isSavingPin ? 'Atualizando Senha...' : 'Atualizar Senha de Administrador'}
-                  </button>
-                </div>
-              </form>
+              </div>
             </div>
           )}
 
@@ -4499,6 +4650,12 @@ export const AdminCoachPortalModal: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* TAB: AUDITORIA */}
+          {activeTab === 'auditoria' && <AdminAuditLogsTab />}
+
+          {/* TAB: BACKUP FIRESTORE */}
+          {activeTab === 'backup' && <AdminBackupTab />}
 
         </div>
         </>

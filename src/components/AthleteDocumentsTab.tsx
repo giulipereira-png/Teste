@@ -28,6 +28,7 @@ import { AthleteRecord, AthleteDocumentItem, DocumentCategory } from '../types';
 import { useCommunity } from '../context/CommunityContext';
 import { downloadAthleteDocument, formatFileSize, getInitialSampleDocuments } from '../utils/documentHelpers';
 import { uploadDocumentToGoogleDrive } from '../services/driveService';
+import { sanitizeFileName, sanitizeText, isValidDocumentMimeType } from '../utils/sanitizer';
 
 const CATEGORIES: DocumentCategory[] = [
   'Laudo Médico / Neurológico (S14)',
@@ -87,25 +88,36 @@ export const AthleteDocumentsTab: React.FC<AthleteDocumentsTabProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Handle local file selection
+  // Handle local file selection with security checks
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check size (max 8MB)
-    if (file.size > 8 * 1024 * 1024) {
-      setUploadError('O arquivo selecionado é maior que o limite de 8 MB.');
+    // Check file extension & mime type (PDF and safe images only)
+    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
+    const safeExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
+    const isMimeValid = isValidDocumentMimeType(file.type || '') || safeExtensions.includes(fileExtension);
+
+    if (!isMimeValid) {
+      setUploadError('Formato não permitido. Por segurança dos dados médicos da ACEDEP, envie apenas documentos em formato PDF (.pdf) ou imagens (.jpg, .png, .webp).');
+      return;
+    }
+
+    // Check size (max 5MB limit for cloud performance and security)
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('O arquivo selecionado é maior que o limite de segurança de 5 MB.');
       return;
     }
 
     setUploadError('');
-    setUploadedFileName(file.name);
+    const safeFileName = sanitizeFileName(file.name);
+    setUploadedFileName(safeFileName);
     setUploadedFileSize(formatFileSize(file.size));
     setUploadedFileType(file.type || 'application/pdf');
 
     // Auto-fill title if empty
     if (!docTitle.trim()) {
-      const cleanName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
+      const cleanName = safeFileName.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
       setDocTitle(cleanName.charAt(0).toUpperCase() + cleanName.slice(1));
     }
 
@@ -125,13 +137,14 @@ export const AthleteDocumentsTab: React.FC<AthleteDocumentsTabProps> = ({
     setUploadError('');
     setUploadSuccess('');
 
-    if (!docTitle.trim()) {
+    const cleanTitle = sanitizeText(docTitle, 120);
+    if (!cleanTitle.trim()) {
       setUploadError('Por favor, informe o título do documento.');
       return;
     }
 
     if (!uploadedFileUrl) {
-      setUploadError('Por favor, selecione um arquivo (PDF, imagem ou documento) para enviar.');
+      setUploadError('Por favor, selecione um arquivo (PDF ou imagem) para enviar.');
       return;
     }
 
@@ -142,8 +155,8 @@ export const AthleteDocumentsTab: React.FC<AthleteDocumentsTabProps> = ({
     try {
       driveInfo = await uploadDocumentToGoogleDrive({
         athleteName: athlete.name,
-        documentTitle: docTitle.trim(),
-        fileName: uploadedFileName || `${docTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
+        documentTitle: cleanTitle.trim(),
+        fileName: uploadedFileName || `${cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
         fileDataUrl: uploadedFileUrl,
       });
     } catch (driveErr) {
@@ -152,9 +165,9 @@ export const AthleteDocumentsTab: React.FC<AthleteDocumentsTabProps> = ({
 
     const newDocItem: AthleteDocumentItem = {
       id: `doc-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      title: docTitle.trim(),
+      title: cleanTitle.trim(),
       category: docCategory,
-      fileName: uploadedFileName || `${docTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
+      fileName: uploadedFileName || `${cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
       fileUrl: uploadedFileUrl,
       fileSize: uploadedFileSize || '1.0 MB',
       fileType: uploadedFileType || 'application/pdf',

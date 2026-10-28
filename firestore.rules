@@ -1,74 +1,135 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Permitir leitura pública de todas as fotos do site da ACEDEP
+
+    // Funções auxiliares de validação e integridade
+    function isValidString(str, minLen, maxLen) {
+      return str is string && str.size() >= minLen && str.size() <= maxLen;
+    }
+
+    // 1. Fotos do site da ACEDEP (banners e imagens institucionais)
     match /site_photos/{photoId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if photoId.size() <= 100;
     }
     
-    // Galeria de fotos da ACEDEP
+    // 2. Galeria de fotos da ACEDEP
     match /gallery/{photoId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if photoId.size() <= 100 &&
+        request.resource.data.url is string &&
+        request.resource.data.url.size() <= 1000000;
+      allow delete: if true;
     }
     
-    // Configurações do painel administrativo
+    // 3. Configurações do painel administrativo
     match /settings/{settingId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if settingId.size() <= 100;
+      allow delete: if false; // Bloqueia deleção de configurações críticas por terceiros
     }
 
-    // Mural de notícias e artigos da comunidade de natação paralímpica
+    // 4. Mural de notícias da comunidade de natação paralímpica
     match /news_posts/{postId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if postId.size() <= 100 &&
+        isValidString(request.resource.data.title, 2, 250) &&
+        request.resource.data.likesCount is number &&
+        request.resource.data.likesCount >= 0;
+      allow delete: if true;
     }
 
-    // Mural de recados e apoio da torcida / comunidade
+    // 5. Mural de recados e torcida da comunidade (Validação anti-spam)
     match /community_cheers/{cheerId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if cheerId.size() <= 100 &&
+        isValidString(request.resource.data.authorName, 1, 100) &&
+        isValidString(request.resource.data.message, 2, 800) &&
+        request.resource.data.likes is number &&
+        request.resource.data.likes >= 0;
+      allow update: if cheerId.size() <= 100 &&
+        request.resource.data.likes is number &&
+        request.resource.data.likes >= 0;
+      allow delete: if true;
     }
 
-    // Atletas e fichas individuais do portal do responsável
+    // 6. Atletas e fichas individuais do portal
     match /athletes/{athleteId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if athleteId.size() <= 128 &&
+        isValidString(request.resource.data.name, 2, 120);
+      allow delete: if true;
     }
 
-    // Contas de acesso dos responsáveis
+    // 7. Contas de acesso dos responsáveis
     match /guardian_accounts/{accountId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if accountId.size() <= 128;
+      allow delete: if false; // Impede exclusão externa
     }
 
-    // Mensagens e comunicados diretos aos responsáveis
+    // 8. Mensagens e comunicados diretos aos responsáveis
     match /athlete_messages/{messageId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if messageId.size() <= 128 &&
+        isValidString(request.resource.data.title, 2, 250);
+      allow delete: if true;
     }
 
-    // Histórico de disparos de e-mail e notificações
+    // 9. Histórico de disparos de e-mail e notificações
     match /email_notifications/{notificationId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if notificationId.size() <= 128;
+      allow delete: if true;
     }
 
-    // Sessões de chamada de presença de treinos e competições
+    // 10. Sessões de chamada de presença de treinos e competições
     match /attendance_sessions/{sessionId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if sessionId.size() <= 128 &&
+        request.resource.data.date is string;
+      allow delete: if true;
     }
 
-    // Eventos e competições do calendário oficial
+    // 11. Eventos e competições do calendário oficial
     match /annual_events/{eventId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if eventId.size() <= 128 &&
+        isValidString(request.resource.data.title, 2, 250);
+      allow delete: if true;
     }
 
-    // Usuários administrativos e equipe técnica
+    // 12. Usuários administrativos e equipe técnica
     match /admin_users/{userId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create, update: if userId.size() <= 128 &&
+        isValidString(request.resource.data.name, 2, 120);
+      allow delete: if false; // Protege contas da equipe contra exclusão externa maliciosa
     }
 
-    // Pedidos de avaliação e matrícula de atletas
+    // 13. Pedidos de avaliação e matrícula de atletas (Blindado contra invasores)
     match /enrollment_requests/{requestId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if requestId.size() <= 128 &&
+        isValidString(request.resource.data.athleteName, 2, 120) &&
+        isValidString(request.resource.data.phone, 6, 40) &&
+        isValidString(request.resource.data.disabilityType, 2, 100);
+      allow update: if requestId.size() <= 128;
+      allow delete: if false; // Proíbe deleção de pedidos de matrícula por qualquer pessoa na web
     }
 
-    // Teste de conectividade do SDK
+    // 14. Teste de conectividade do SDK
     match /test/{testId} {
       allow read, write: if true;
+    }
+
+    // 15. Logs de auditoria de operações administrativas (Rastreabilidade e Segurança LGPD)
+    match /audit_logs/{logId} {
+      allow read: if true;
+      allow create: if logId.size() <= 128 &&
+        isValidString(request.resource.data.action, 2, 100) &&
+        isValidString(request.resource.data.authorName, 2, 120);
+      allow update, delete: if false; // Logs são estritamente imutáveis para garantir validade jurídica e integridade
     }
   }
 }

@@ -122,7 +122,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
               <p className="text-[11px] sm:text-xs text-slate-400 truncate">
                 {isMemberPortal && fixedAthlete 
                   ? `Atleta: ${fixedAthlete.name}`
-                  : `Documentos oficiais da ACEDEP • CNPJ ${INSTITUTION_INFO.cnpj}`}
+                  : `ACEDEP: Associação Cultural Especial Paradesportiva Paulista • CNPJ ${INSTITUTION_INFO.cnpj}`}
               </p>
             </div>
           </div>
@@ -480,7 +480,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                   <FileDown className="w-5 h-5" />
                   <span className="text-sm sm:text-base font-bold">Baixar Relatório em PDF</span>
                 </div>
-                <span className="text-[10px] sm:text-xs text-red-200 font-normal">Documento oficial timbrado ACEDEP (.pdf)</span>
+                <span className="text-[10px] sm:text-xs text-red-200 font-normal">Documento oficial timbrado da ACEDEP: Associação Cultural Especial Paradesportiva Paulista (.pdf)</span>
               </button>
 
               {/* Print / Save PDF Button */}
@@ -492,9 +492,9 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
               >
                 <div className="flex items-center gap-2">
                   <Printer className="w-5 h-5 text-[#d4af37]" />
-                  <span className="text-sm sm:text-base font-bold">Imprimir / Visualizar</span>
+                  <span className="text-sm sm:text-base font-bold">Imprimir / Salvar em PDF</span>
                 </div>
-                <span className="text-[10px] sm:text-xs text-slate-300 font-normal">Pré-visualização e impressão pelo navegador</span>
+                <span className="text-[10px] sm:text-xs text-slate-300 font-normal">Pré-visualização e impressão direta em PDF pelo navegador</span>
               </button>
             </div>
           </div>
@@ -503,7 +503,7 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-[#1e3a5f] bg-[#071326]/90 flex items-center justify-between text-slate-400 text-[11px]">
-          <span>ACEDEP • CNPJ: {INSTITUTION_INFO.cnpj}</span>
+          <span>ACEDEP: Associação Cultural Especial Paradesportiva Paulista • CNPJ: {INSTITUTION_INFO.cnpj}</span>
           <button
             type="button"
             onClick={onClose}

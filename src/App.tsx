@@ -30,8 +30,28 @@ import { MemberPortalModal } from './components/MemberPortalModal';
 import { AdminCoachPortalModal } from './components/AdminCoachPortalModal';
 import { CommunityNewsModal } from './components/CommunityNewsModal';
 
-import { PhotosProvider } from './context/PhotosContext';
-import { CommunityProvider } from './context/CommunityContext';
+import { PhotosProvider, usePhotos } from './context/PhotosContext';
+import { CommunityProvider, useCommunity } from './context/CommunityContext';
+import { useInactivityTimeout } from './hooks/useInactivityTimeout';
+
+// Monitor de segurança de sessão: encerra sessões inativas automaticamente após 30 minutos (Proteção LGPD)
+const SecuritySessionWatcher: React.FC = () => {
+  const { isAdminAuthenticated, logoutAdmin } = usePhotos();
+  const { isGuardianAuthenticated, guardianLogout } = useCommunity();
+
+  const isAnyAuthenticated = isAdminAuthenticated || isGuardianAuthenticated;
+
+  useInactivityTimeout(isAnyAuthenticated, () => {
+    if (isAdminAuthenticated) {
+      logoutAdmin();
+    }
+    if (isGuardianAuthenticated) {
+      guardianLogout();
+    }
+  }, 30);
+
+  return null;
+};
 
 export type AppPage = 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'admin';
 
@@ -204,6 +224,9 @@ export default function App() {
           <CommunityNewsModal />
 
           <AdminCoachPortalModal />
+
+          {/* Guarda de segurança de sessão contra abandono de tela aberta */}
+          <SecuritySessionWatcher />
         </div>
       </CommunityProvider>
     </PhotosProvider>

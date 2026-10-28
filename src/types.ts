@@ -262,3 +262,60 @@ export interface AdminUser {
   lastLogin?: string;
 }
 
+export type AuditActionType = 'Criação' | 'Edição' | 'Exclusão' | 'Backup' | 'Presença' | 'Exportação' | 'Login';
+export type AuditTargetType = 'Atleta' | 'Evento' | 'Recado' | 'Notícia' | 'Presença' | 'Documento' | 'Sistema' | 'Administrador' | 'Backup';
+
+export interface AuditLogItem {
+  id: string;
+  timestamp: string; // ISO string
+  dateFormatted: string; // DD/MM/YYYY HH:mm
+  authorName: string; // ex: "Prof. Gabriel", "Giuli Pereira"
+  authorEmail?: string;
+  authorRole?: string;
+  action: AuditActionType;
+  targetType: AuditTargetType;
+  targetId?: string;
+  targetName: string; // ex: "Lucas Gabriel (Atleta)", "50m Livre", "Campeonato Paulista"
+  details: string; // Descrição legível da alteração realizada
+}
+
+export interface FirestoreBackupPackage {
+  metadata: {
+    institution: string;
+    system: string;
+    exportedAt: string;
+    exportedDateFormatted: string;
+    exportedBy: {
+      name: string;
+      email: string;
+      role: string;
+    };
+    formatVersion: string;
+    totalRecords: number;
+    collectionCounts: {
+      athletes: number;
+      annualEvents: number;
+      communityCheers: number;
+      attendanceSessions: number;
+      newsPosts: number;
+      emailLogs: number;
+      adminUsers: number;
+      galleryPhotos: number;
+      sitePhotosCount: number;
+      auditLogs: number;
+    };
+  };
+  data: {
+    athletes: AthleteRecord[];
+    annualEvents: AnnualCalendarEvent[];
+    communityCheers: CommunityCheer[];
+    attendanceSessions: AttendanceSession[];
+    newsPosts: NewsPost[];
+    emailLogs: EmailNotificationLog[];
+    adminUsers: Array<Omit<AdminUser, 'pin'>>;
+    galleryPhotos: any[];
+    sitePhotos: Record<string, string>;
+    auditLogs: AuditLogItem[];
+  };
+}
+

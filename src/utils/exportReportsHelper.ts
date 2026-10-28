@@ -2,10 +2,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AthleteRecord, AttendanceSession, SwimmingStroke, DisabilityCategory } from '../types';
 import { groupAndRankMetrics, STROKE_OPTIONS } from './swimmingMetricsHelper';
+import { isDateInMonth, sortDatesDescending } from './dateAndAttendanceHelper';
 
 // Instituição
 export const INSTITUTION_INFO = {
-  name: 'ACEDEP - Associação Cultural Especial Paradesportiva Paulista',
+  name: 'ACEDEP: Associação Cultural Especial Paradesportiva Paulista',
   cnpj: '12.579.030/0001-83',
   location: 'Centro Paralímpico Brasileiro (CPB) - Rod. dos Imigrantes, km 11,5 - São Paulo/SP',
   program: 'Programa de Alto Rendimento e Formação - Natação Paralímpica S14 / CBDI / CPB',
@@ -19,7 +20,7 @@ export type ReportType =
   | 'swimming_times_ranking'
   | 'athlete_individual';
 
-export type ExportFormat = 'pdf' | 'word' | 'print';
+export type ExportFormat = 'pdf' | 'print';
 
 export interface ExportReportOptions {
   reportType: ReportType;
@@ -128,12 +129,11 @@ export function generateWordDocument(options: ExportReportOptions): void {
     title = `RELATÓRIO DE FREQUÊNCIA E LISTA DE CHAMADA - ${MONTH_NAMES[selectedMonth].toUpperCase()} / ${selectedYear}`;
     subtitle = `Controle de Assiduidade em Treinos Aquáticos e Campeonatos Oficiais`;
 
-    // Filter sessions for month
+    // Filter sessions for month safely across all browsers
     const monthSessions = attendanceSessions.filter(s => {
       if (!s.date) return false;
-      const d = new Date(s.date);
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-    }).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      return isDateInMonth(s.date, selectedMonth, selectedYear);
+    }).sort((a, b) => sortDatesDescending(a.date, b.date));
 
     contentHtml = `
       <div style="margin-bottom: 15px; font-family: Arial, sans-serif;">
@@ -514,9 +514,9 @@ export function generatePdfDocument(options: ExportReportOptions): void {
 
     // Institution Name
     docInstance.setFont('helvetica', 'bold');
-    docInstance.setFontSize(11);
+    docInstance.setFontSize(10.5);
     docInstance.setTextColor(255, 255, 255);
-    docInstance.text('ACEDEP - ASSOCIAÇÃO CULTURAL ESPECIAL PARADESPORTIVA PAULISTA', 14, 9);
+    docInstance.text('ACEDEP: ASSOCIAÇÃO CULTURAL ESPECIAL PARADESPORTIVA PAULISTA', 14, 9);
 
     // Sub details
     docInstance.setFont('helvetica', 'normal');
@@ -552,7 +552,7 @@ export function generatePdfDocument(options: ExportReportOptions): void {
       docInstance.setFont('helvetica', 'normal');
       docInstance.setFontSize(7);
       docInstance.setTextColor(120, 130, 145);
-      docInstance.text(`ACEDEP - CNPJ: ${INSTITUTION_INFO.cnpj}  •  Sistema de Gestão Esportiva & Acompanhamento de Atletas`, 14, pageHeight - 7);
+      docInstance.text(`ACEDEP: Associação Cultural Especial Paradesportiva Paulista  •  CNPJ: ${INSTITUTION_INFO.cnpj}`, 14, pageHeight - 7);
       docInstance.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 7, { align: 'right' });
     }
   };
@@ -601,9 +601,8 @@ export function generatePdfDocument(options: ExportReportOptions): void {
   } else if (reportType === 'attendance_monthly') {
     const monthSessions = attendanceSessions.filter(s => {
       if (!s.date) return false;
-      const d = new Date(s.date);
-      return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
-    }).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+      return isDateInMonth(s.date, selectedMonth, selectedYear);
+    }).sort((a, b) => sortDatesDescending(a.date, b.date));
 
     drawHeader(
       doc, 
@@ -898,9 +897,10 @@ export function openPrintableView(options: ExportReportOptions): void {
   // Leverage generateWordDocument logic or open a dedicated print window
   const { reportType, athletes, attendanceSessions = [], selectedAthleteId, selectedMonth = new Date().getMonth(), selectedYear = new Date().getFullYear(), selectedStroke = 'all', filterCategory = 'all' } = options;
 
-  const printWindow = window.open('', '_blank', 'width=900,height=800');
+  const printWindow = typeof window !== 'undefined' ? window.open('', '_blank', 'width=900,height=800') : null;
   if (!printWindow) {
-    alert('Por favor, permita pop-ups para abrir a visualização de impressão.');
+    // If popup is blocked by the browser or iframe sandbox, smoothly fallback to official PDF download
+    generatePdfDocument(options);
     return;
   }
 
@@ -1199,7 +1199,7 @@ export function openPrintableView(options: ExportReportOptions): void {
         ${bodyContent}
 
         <div class="footer">
-          <p>ACEDEP - Associação Cultural Especial Paradesportiva Paulista • CNPJ: ${INSTITUTION_INFO.cnpj}</p>
+          <p>ACEDEP: Associação Cultural Especial Paradesportiva Paulista • CNPJ: ${INSTITUTION_INFO.cnpj}</p>
           <p>Documento oficial emitido eletronicamente para fins cadastrais e de acompanhamento esportivo.</p>
         </div>
 
@@ -1215,14 +1215,13 @@ export function openPrintableView(options: ExportReportOptions): void {
 }
 
 /**
- * Universal export function that executes the chosen format
+ * Universal export function that executes the chosen format (PDF only or browser print-to-PDF)
  */
 export function exportReport(options: ExportReportOptions): void {
-  if (options.format === 'word') {
-    generateWordDocument(options);
-  } else if (options.format === 'pdf') {
-    generatePdfDocument(options);
-  } else if (options.format === 'print') {
+  if (options.format === 'print') {
     openPrintableView(options);
+  } else {
+    // Default to official PDF
+    generatePdfDocument(options);
   }
 }

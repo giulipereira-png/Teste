@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { db, doc, setDoc, OperationType, handleFirestoreError } from '../lib/firebase';
+import { sanitizeText } from '../utils/sanitizer';
 
 interface AthleteEnrollmentModalProps {
   isOpen: boolean;
@@ -61,19 +62,19 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
     setErrorMessage('');
 
     try {
-      // Salva os dados permanentemente na nuvem (Firestore) - Acessível de qualquer aparelho
+      // Salva os dados permanentemente na nuvem (Firestore) com sanitização de segurança
       const enrollmentId = `req-${Date.now()}`;
       await setDoc(doc(db, 'enrollment_requests', enrollmentId), {
         id: enrollmentId,
-        athleteName: formData.athleteName,
-        guardianName: formData.guardianName,
-        age: formData.age,
-        disabilityType: formData.disabilityType,
-        modalityType: formData.modalityType,
-        swimmingExperience: formData.swimmingExperience,
-        phone: formData.phone,
-        email: formData.email || '',
-        notes: formData.notes || '',
+        athleteName: sanitizeText(formData.athleteName, 100),
+        guardianName: sanitizeText(formData.guardianName, 100),
+        age: sanitizeText(formData.age, 20),
+        disabilityType: sanitizeText(formData.disabilityType, 100),
+        modalityType: sanitizeText(formData.modalityType, 100),
+        swimmingExperience: sanitizeText(formData.swimmingExperience, 100),
+        phone: sanitizeText(formData.phone, 30),
+        email: sanitizeText(formData.email || '', 100),
+        notes: sanitizeText(formData.notes || '', 1000),
         status: 'Pendente',
         createdAt: new Date().toISOString(),
       });

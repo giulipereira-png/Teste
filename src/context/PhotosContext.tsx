@@ -3,6 +3,7 @@ import { db, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, 
 import { AdminUser } from '../types';
 import { INITIAL_ADMIN_USERS } from '../data/initialCommunityData';
 import { optimizeImage } from '../lib/imageOptimizer';
+import { checkRateLimit, recordFailedAttempt, resetRateLimit } from '../utils/securityRateLimiter';
 
 export interface SitePhotoData {
   id: string;
@@ -439,7 +440,10 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (list.length > 0) {
             setAdminUsers(list);
             try {
-              localStorage.setItem('acedep_cached_admin_users', JSON.stringify(list));
+              // Só armazena em cache permanente do navegador se for sessão autenticada de admin
+              if (localStorage.getItem('acedep_admin_auth') === 'true') {
+                localStorage.setItem('acedep_cached_admin_users', JSON.stringify(list));
+              }
             } catch {}
           } else {
             setAdminUsers(INITIAL_ADMIN_USERS);
@@ -504,6 +508,12 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     pin: string,
     email?: string
   ): Promise<{ success: boolean; error?: string }> => {
+    // Verificação de taxa de tentativas (Anti-Força Bruta)
+    const rateStatus = checkRateLimit('admin_login');
+    if (rateStatus.isLocked) {
+      return { success: false, error: rateStatus.message };
+    }
+
     const normalizedPin = pin.trim();
     const normalizedEmail = (email || '').trim().toLowerCase();
     if (!normalizedPin) {
@@ -564,6 +574,7 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const isPasswordCorrect = (userByEmail.pin?.trim() === normalizedPin) || isMasterPin;
 
         if (isPasswordCorrect) {
+          resetRateLimit('admin_login');
           setIsAdminAuthenticated(true);
           setCurrentAdminProfile(userByEmail);
           try {
@@ -582,9 +593,10 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
           return { success: true };
         } else {
+          const failStatus = recordFailedAttempt('admin_login');
           return {
             success: false,
-            error: 'Senha incorreta para o e-mail informado. Digite a senha cadastrada ou redefina-a.',
+            error: failStatus.message || 'Senha incorreta para o e-mail informado. Digite a senha cadastrada ou redefina-a.',
           };
         }
       }
@@ -599,6 +611,7 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           error: 'Este perfil foi desativado pela coordenação.',
         };
       }
+      resetRateLimit('admin_login');
       setIsAdminAuthenticated(true);
       setCurrentAdminProfile(matchedByPinOnly);
       try {
@@ -620,6 +633,7 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     // 4. Master PIN fallback (Super Admin login)
     if (isMasterPin) {
+      resetRateLimit('admin_login');
       setIsAdminAuthenticated(true);
       const masterAdmin = currentList.find((a) => a.email.toLowerCase() === 'giuli.pereira@gmail.com') || {
         id: 'admin-master-1',
@@ -640,16 +654,17 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return { success: true };
     }
 
+    const failStatus = recordFailedAttempt('admin_login');
     if (normalizedEmail) {
       return {
         success: false,
-        error: 'E-mail não encontrado na lista de professores ou coordenadores cadastrados.',
+        error: failStatus.isLocked ? failStatus.message : 'E-mail não encontrado na lista de professores ou coordenadores cadastrados.',
       };
     }
 
     return {
       success: false,
-      error: 'Credenciais de acesso incorretas. Digite seu e-mail de professor e a senha cadastrada.',
+      error: failStatus.message || 'Credenciais de acesso incorretas. Digite seu e-mail de professor e a senha cadastrada.',
     };
   };
 

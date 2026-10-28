@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, cleanFirestoreData } from '../lib/firebase';
 import { optimizeImage } from '../lib/imageOptimizer';
+import { checkRateLimit, recordFailedAttempt, resetRateLimit } from '../utils/securityRateLimiter';
+import { sanitizeText } from '../utils/sanitizer';
 import { 
   NewsPost, 
   CommunityCheer, 
@@ -21,8 +23,11 @@ import {
   TrainingAttendanceDay,
   EmailNotificationLog,
   AttendanceSession,
-  AnnualCalendarEvent
+  AnnualCalendarEvent,
+  AuditLogItem
 } from '../types';
+import { calculateAthleteAttendanceStats, parseAppDate, sortDatesDescending } from '../utils/dateAndAttendanceHelper';
+import { recordAuditLog, fetchAuditLogsFromFirestore, RecordAuditParams } from '../services/auditService';
 import { 
   INITIAL_NEWS_POSTS, 
   INITIAL_COMMUNITY_CHEERS, 
@@ -126,6 +131,11 @@ interface CommunityContextType {
   addAnnualEvent: (event: Omit<AnnualCalendarEvent, 'id' | 'createdAt'>) => Promise<boolean>;
   updateAnnualEvent: (id: string, updates: Partial<AnnualCalendarEvent>) => Promise<boolean>;
   deleteAnnualEvent: (id: string) => Promise<boolean>;
+
+  // Audit Logs & Traceability
+  auditLogs: AuditLogItem[];
+  addAuditLog: (params: RecordAuditParams) => Promise<AuditLogItem>;
+  refreshAuditLogs: () => Promise<void>;
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -156,6 +166,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [attendanceSessions, setAttendanceSessions] = useState<AttendanceSession[]>(INITIAL_ATTENDANCE_SESSIONS);
   const [emailLogs, setEmailLogs] = useState<EmailNotificationLog[]>(INITIAL_EMAIL_LOGS);
   const [annualEvents, setAnnualEvents] = useState<AnnualCalendarEvent[]>(INITIAL_ANNUAL_EVENTS);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
   
   // Authenticated Guardian State
   const [currentAthleteId, setCurrentAthleteId] = useState<string | null>(() => {
@@ -190,6 +201,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let unsubscribeEmailLogs: () => void = () => {};
     let unsubscribeAttendance: () => void = () => {};
     let unsubscribeAnnualEvents: () => void = () => {};
+    let unsubscribeAuditLogs: () => void = () => {};
 
     const setupFirestore = async () => {
       // 1. Sync News
@@ -416,6 +428,30 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           handleFirestoreError(error, OperationType.LIST, 'annual_events');
         }
       );
+
+      // 7. Sync Audit Logs (Rastreabilidade e Segurança de Alterações)
+      fetchAuditLogsFromFirestore().then((initialLogs) => {
+        if (initialLogs && initialLogs.length > 0) {
+          setAuditLogs(initialLogs);
+        }
+      });
+
+      unsubscribeAuditLogs = onSnapshot(
+        collection(db, 'audit_logs'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: AuditLogItem[] = [];
+            snapshot.forEach((docSnap) => {
+              list.push({ ...docSnap.data(), id: docSnap.id } as AuditLogItem);
+            });
+            list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+            setAuditLogs(list);
+          }
+        },
+        (error) => {
+          handleFirestoreError(error, OperationType.LIST, 'audit_logs');
+        }
+      );
     };
 
     setupFirestore();
@@ -427,11 +463,18 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       unsubscribeEmailLogs();
       unsubscribeAttendance();
       unsubscribeAnnualEvents();
+      unsubscribeAuditLogs();
     };
   }, []);
 
-  // Guardian Login with robust cross-device matching (by name, email, phone, id, or registration code)
+  // Guardian Login with robust cross-device matching and anti-brute-force rate limiting
   const guardianLogin = async (identifier: string, accessCode: string): Promise<{ success: boolean; message?: string }> => {
+    // Verificação de taxa de tentativas para responsáveis
+    const rateStatus = checkRateLimit('guardian_login');
+    if (rateStatus.isLocked) {
+      return { success: false, message: rateStatus.message };
+    }
+
     const cleanId = identifier.trim().toLowerCase();
     const cleanCode = accessCode.trim().toLowerCase();
     const cleanDigitsId = cleanId.replace(/\D/g, '');
@@ -487,12 +530,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
         matched = freshList.find(checkMatch);
       }
+
+      // Also refresh attendance sessions on login to ensure cross-browser instant availability
+      const sessSnap = await getDocs(collection(db, 'attendance_sessions'));
+      if (!sessSnap.empty) {
+        const freshSessions: AttendanceSession[] = [];
+        sessSnap.forEach((docSnap) => {
+          freshSessions.push({ ...docSnap.data(), id: docSnap.id } as AttendanceSession);
+        });
+        setAttendanceSessions(freshSessions);
+      }
     } catch (e) {
       console.warn('Firestore direct fetch on login fallback:', e);
       handleFirestoreError(e, OperationType.LIST, 'athletes');
     }
 
     if (matched) {
+      resetRateLimit('guardian_login');
       setCurrentAthleteId(matched.id);
       try {
         localStorage.setItem('acedep_logged_athlete_id', matched.id);
@@ -501,9 +555,12 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       return { success: true };
     }
 
+    const failStatus = recordFailedAttempt('guardian_login');
     return { 
       success: false, 
-      message: 'Atleta ou Responsável não encontrado com estes dados. Verifique o nome/e-mail e a senha informados pelo professor.' 
+      message: failStatus.isLocked 
+        ? failStatus.message 
+        : `Atleta ou Responsável não encontrado com estes dados. Verifique o nome/e-mail e a senha informados pelo professor. (${failStatus.remainingAttempts} tentativas restantes)`
     };
   };
 
@@ -599,16 +656,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Cheers Actions
+  // Cheers Actions with Anti-XSS Sanitization
   const addCheer = async (data: { authorName: string; relationship: string; message: string }): Promise<boolean> => {
     const colors = ['#d4af37', '#38bdf8', '#34d399', '#f472b6', '#a78bfa', '#fb923c'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
     const newId = `cheer-${Date.now()}`;
     const newCheer: CommunityCheer = {
       id: newId,
-      authorName: data.authorName.trim(),
-      relationship: data.relationship.trim(),
-      message: data.message.trim(),
+      authorName: sanitizeText(data.authorName, 80),
+      relationship: sanitizeText(data.relationship, 60),
+      message: sanitizeText(data.message, 600),
       avatarColor: randomColor,
       likes: 0,
       createdAt: new Date().toISOString(),
@@ -616,6 +673,15 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       await setDoc(doc(db, 'community_cheers', newId), newCheer);
       setCheers((prev) => [newCheer, ...prev]);
+      recordAuditLog({
+        action: 'Criação',
+        targetType: 'Recado',
+        targetId: newId,
+        targetName: `Mural (${newCheer.authorName})`,
+        details: `Publicou recado de apoio: "${newCheer.message.slice(0, 80)}..."`,
+        authorName: newCheer.authorName,
+        authorRole: newCheer.relationship || 'Comunidade ACEDEP',
+      }).catch(() => {});
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, `community_cheers/${newId}`);
@@ -638,6 +704,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setCheers((prev) =>
         prev.map((c) => (c.id === id ? { ...c, ...cleanData } : c))
       );
+      recordAuditLog({
+        action: 'Edição',
+        targetType: 'Recado',
+        targetId: id,
+        targetName: `Mural (${cleanData.authorName})`,
+        details: `Editou/moderou recado da família: "${cleanData.message.slice(0, 80)}..."`,
+      }).catch(() => {});
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `community_cheers/${id}`);
@@ -649,9 +722,17 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const deleteCheer = async (id: string): Promise<boolean> => {
+    const cheerToDelete = cheers.find((c) => c.id === id);
     try {
       await deleteDoc(doc(db, 'community_cheers', id));
       setCheers((prev) => prev.filter((c) => c.id !== id));
+      recordAuditLog({
+        action: 'Exclusão',
+        targetType: 'Recado',
+        targetId: id,
+        targetName: `Mural (${cheerToDelete?.authorName || id})`,
+        details: `Excluiu recado de torcida de ${cheerToDelete?.authorName || 'familiar'}.`,
+      }).catch(() => {});
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `community_cheers/${id}`);
@@ -715,6 +796,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     try {
       await setDoc(doc(db, 'athletes', sanitized.id), sanitized, { merge: true });
+      const isNewAthlete = !athletes.some((a) => a.id === sanitized.id);
       setAthletes((prev) => {
         const index = prev.findIndex((a) => a.id === sanitized.id);
         const updated = index >= 0
@@ -725,6 +807,17 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         } catch {}
         return updated;
       });
+
+      recordAuditLog({
+        action: isNewAthlete ? 'Criação' : 'Edição',
+        targetType: 'Atleta',
+        targetId: sanitized.id,
+        targetName: sanitized.name,
+        details: isNewAthlete
+          ? `Cadastrou novo atleta paralímpico: ${sanitized.name} (${sanitized.paralympicClass || 'S14'})`
+          : `Atualizou prontuário de ${sanitized.name} (documentos, RPs ou dados cadastrais)`,
+      }).catch(() => {});
+
       return true;
     } catch (e) {
       console.error('Error saving athlete to Firestore:', e);
@@ -744,12 +837,20 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const deleteAthleteRecord = async (athleteId: string): Promise<boolean> => {
+    const athleteToDelete = athletes.find((a) => a.id === athleteId);
     try {
       await deleteDoc(doc(db, 'athletes', athleteId));
       setAthletes((prev) => prev.filter((a) => a.id !== athleteId));
       if (currentAthleteId === athleteId) {
         guardianLogout();
       }
+      recordAuditLog({
+        action: 'Exclusão',
+        targetType: 'Atleta',
+        targetId: athleteId,
+        targetName: athleteToDelete?.name || athleteId,
+        details: `Excluiu registro do atleta: ${athleteToDelete?.name || athleteId}`,
+      }).catch(() => {});
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `athletes/${athleteId}`);
@@ -797,6 +898,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     const saved = await saveAthleteRecord(updatedAthlete);
+    if (saved) {
+      recordAuditLog({
+        action: 'Criação',
+        targetType: 'Atleta',
+        targetId: athleteId,
+        targetName: `${target.name} - ${newMetric.event}`,
+        details: `Registrou tempo de ${newMetric.event}: ${newMetric.bestTime} (${newMetric.evolution || 'Oficial'}) em ${newMetric.stageName}`,
+      }).catch(() => {});
+    }
+
     if (saved && notifyGuardianEmail && target.guardianEmail) {
       await sendEmailNotification({
         type: 'tempo_rp',
@@ -825,12 +936,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     if (!target) return false;
 
+    const deletedMetric = (target.swimmingMetrics || []).find((m) => m.id === metricId);
     const updatedMetrics = (target.swimmingMetrics || []).filter((m) => m.id !== metricId);
     const updatedAthlete: AthleteRecord = {
       ...target,
       swimmingMetrics: updatedMetrics,
     };
-    return await saveAthleteRecord(updatedAthlete);
+    const saved = await saveAthleteRecord(updatedAthlete);
+    if (saved) {
+      recordAuditLog({
+        action: 'Exclusão',
+        targetType: 'Atleta',
+        targetId: athleteId,
+        targetName: `${target.name} - ${deletedMetric?.event || 'Prova'}`,
+        details: `Excluiu registro de tempo cronometrado de ${deletedMetric?.event || 'prova'} (${deletedMetric?.bestTime || ''})`,
+      }).catch(() => {});
+    }
+    return saved;
   };
 
   const addCoachNote = async (
@@ -867,6 +989,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     };
 
     const saved = await saveAthleteRecord(updatedAthlete);
+    if (saved) {
+      recordAuditLog({
+        action: 'Criação',
+        targetType: 'Atleta',
+        targetId: athleteId,
+        targetName: `${target.name} - Orientação Técnica`,
+        details: `${newNote.coachName} registrou recado: "${newNote.title}"`,
+      }).catch(() => {});
+    }
+
     if (saved && notifyGuardianEmail && target.guardianEmail) {
       await sendEmailNotification({
         type: 'recado_treinador',
@@ -895,12 +1027,23 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
     if (!target) return false;
 
+    const deletedNote = (target.coachNotes || []).find((n) => n.id === noteId);
     const updatedNotes = (target.coachNotes || []).filter((n) => n.id !== noteId);
     const updatedAthlete: AthleteRecord = {
       ...target,
       coachNotes: updatedNotes,
     };
-    return await saveAthleteRecord(updatedAthlete);
+    const saved = await saveAthleteRecord(updatedAthlete);
+    if (saved) {
+      recordAuditLog({
+        action: 'Exclusão',
+        targetType: 'Atleta',
+        targetId: athleteId,
+        targetName: `${target.name} - Orientação Técnica`,
+        details: `Excluiu orientação técnica: "${deletedNote?.title || 'Recado'}"`,
+      }).catch(() => {});
+    }
+    return saved;
   };
 
   const sendEmailNotification = async (
@@ -993,8 +1136,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     }
 
-    // Sort by date descending
-    updatedAttendance.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    // Sort by date descending reliably using timestamp
+    updatedAttendance.sort((a, b) => sortDatesDescending(a.date, b.date));
 
     // Recompute athlete's attendance rate
     const totalDays = updatedAttendance.length;
@@ -1007,21 +1150,65 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       attendanceRate: calculatedRate,
     };
 
-    // Also sync with attendance_sessions if a session exists for this date
+    // CRITICAL: Synchronize with attendance_sessions in Firestore so ALL browsers & parent portal see it immediately!
     try {
+      const sessionStatus = status === 'presente' ? 'presente' : status === 'falta_justificada' ? 'justificado' : 'ausente';
       const existingSession = attendanceSessions.find((s) => s.date === dateStr);
+
       if (existingSession) {
-        const records = [...existingSession.records];
+        const records = [...(existingSession.records || [])];
         const recIdx = records.findIndex((r) => r.athleteId === athleteId);
-        const sessionStatus = status === 'presente' ? 'presente' : status === 'falta_justificada' ? 'justificado' : 'ausente';
-        if (recIdx >= 0) {
+        if (status === 'remover') {
+          if (recIdx >= 0) records.splice(recIdx, 1);
+        } else if (recIdx >= 0) {
           records[recIdx] = { ...records[recIdx], status: sessionStatus };
         } else {
           records.push({ athleteId, athleteName: target.name, status: sessionStatus });
         }
-        await updateAttendanceSession(existingSession.id, { records });
+        const presentIds = records.filter((r) => r.status === 'presente').map((r) => r.athleteId);
+        await updateDoc(doc(db, 'attendance_sessions', existingSession.id), {
+          records,
+          presentAthleteIds: presentIds,
+          totalAthletesCount: athletes.length,
+        });
+        setAttendanceSessions((prev) =>
+          prev.map((s) =>
+            s.id === existingSession.id
+              ? { ...s, records, presentAthleteIds: presentIds, totalAthletesCount: athletes.length }
+              : s
+          )
+        );
+      } else if (status !== 'remover') {
+        // Create new session document in Firestore
+        const sessionCleanId = `att_sess_${dateStr.replace(/[^0-9]/g, '_')}`;
+        const newSession: AttendanceSession = {
+          id: sessionCleanId,
+          type: 'treino',
+          title: `Treino de Natação Paralímpica`,
+          date: dateStr,
+          location: target.trainingSchedule?.pool || 'Piscinas Centro Paralímpico Brasileiro (CPB)',
+          records: [
+            {
+              athleteId,
+              athleteName: target.name,
+              status: sessionStatus,
+              notes: status === 'falta_justificada' ? 'Falta Justificada' : undefined,
+            }
+          ],
+          presentAthleteIds: status === 'presente' ? [athleteId] : [],
+          totalAthletesCount: athletes.length,
+          notes: 'Registro oficial de frequência da comissão técnica.',
+          createdAt: new Date().toISOString(),
+        };
+        await setDoc(doc(db, 'attendance_sessions', sessionCleanId), newSession);
+        setAttendanceSessions((prev) => {
+          const filtered = prev.filter((s) => s.id !== sessionCleanId);
+          return [newSession, ...filtered];
+        });
       }
-    } catch {}
+    } catch (sessionErr) {
+      console.warn('Attendance session Firestore sync warning:', sessionErr);
+    }
 
     return saveAthleteRecord(updatedAthlete);
   };
@@ -1049,7 +1236,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     });
 
-    updatedAttendance.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    updatedAttendance.sort((a, b) => sortDatesDescending(a.date, b.date));
 
     const totalDays = updatedAttendance.length;
     const presentDays = updatedAttendance.filter((r) => r.status === 'presente' || r.status === 'falta_justificada').length;
@@ -1060,6 +1247,43 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       recentAttendance: updatedAttendance,
       attendanceRate: calculatedRate,
     };
+
+    // Batch sync to attendance_sessions in Firestore
+    for (const rec of records) {
+      try {
+        const sessionStatus = rec.status === 'presente' ? 'presente' : rec.status === 'falta_justificada' ? 'justificado' : 'ausente';
+        const existingSession = attendanceSessions.find((s) => s.date === rec.date);
+        if (existingSession) {
+          const sRecords = [...(existingSession.records || [])];
+          const recIdx = sRecords.findIndex((r) => r.athleteId === athleteId);
+          if (recIdx >= 0) {
+            sRecords[recIdx] = { ...sRecords[recIdx], status: sessionStatus };
+          } else {
+            sRecords.push({ athleteId, athleteName: target.name, status: sessionStatus });
+          }
+          const pIds = sRecords.filter((r) => r.status === 'presente').map((r) => r.athleteId);
+          await updateDoc(doc(db, 'attendance_sessions', existingSession.id), {
+            records: sRecords,
+            presentAthleteIds: pIds,
+          });
+        } else {
+          const sessionCleanId = `att_sess_${rec.date.replace(/[^0-9]/g, '_')}`;
+          const newSession: AttendanceSession = {
+            id: sessionCleanId,
+            type: 'treino',
+            title: `Treino de Natação Paralímpica`,
+            date: rec.date,
+            location: target.trainingSchedule?.pool || 'Piscinas Centro Paralímpico Brasileiro (CPB)',
+            records: [{ athleteId, athleteName: target.name, status: sessionStatus }],
+            presentAthleteIds: rec.status === 'presente' ? [athleteId] : [],
+            totalAthletesCount: athletes.length,
+            notes: 'Registro oficial de frequência da comissão técnica.',
+            createdAt: new Date().toISOString(),
+          };
+          await setDoc(doc(db, 'attendance_sessions', sessionCleanId), newSession);
+        }
+      } catch (err) {}
+    }
 
     return saveAthleteRecord(updatedAthlete);
   };
@@ -1077,6 +1301,35 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       await setDoc(doc(db, 'attendance_sessions', id), newSession);
       setAttendanceSessions((prev) => [newSession, ...prev]);
+
+      // Sync recentAttendance on affected athletes in background
+      if (Array.isArray(sessionData.records) && sessionData.records.length > 0) {
+        for (const rec of sessionData.records) {
+          const ath = athletes.find((a) => a.id === rec.athleteId);
+          if (ath) {
+            const currentRecent = [...(ath.recentAttendance || [])];
+            const directStatus: 'presente' | 'falta' | 'falta_justificada' =
+              rec.status === 'presente' ? 'presente' : rec.status === 'justificado' ? 'falta_justificada' : 'falta';
+            const exIdx = currentRecent.findIndex((r) => r.date === sessionData.date);
+            const newDay: TrainingAttendanceDay = {
+              date: sessionData.date,
+              status: directStatus,
+              note: rec.notes || sessionData.title,
+            };
+            if (exIdx >= 0) {
+              currentRecent[exIdx] = newDay;
+            } else {
+              currentRecent.push(newDay);
+            }
+            currentRecent.sort((a, b) => sortDatesDescending(a.date, b.date));
+            const total = currentRecent.length;
+            const pres = currentRecent.filter((r) => r.status === 'presente' || r.status === 'falta_justificada').length;
+            const rate = total > 0 ? Math.round((pres / total) * 100) : 100;
+            saveAthleteRecord({ ...ath, recentAttendance: currentRecent, attendanceRate: rate }).catch(() => {});
+          }
+        }
+      }
+
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, `attendance_sessions/${id}`);
@@ -1094,6 +1347,38 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setAttendanceSessions((prev) =>
         prev.map((s) => (s.id === id ? { ...s, ...updates } : s))
       );
+
+      // Sync updated records back to athletes if date or records changed
+      const targetSession = attendanceSessions.find((s) => s.id === id);
+      const sessionDate = updates.date || targetSession?.date;
+      const sessionRecords = updates.records || targetSession?.records;
+      if (sessionDate && Array.isArray(sessionRecords)) {
+        for (const rec of sessionRecords) {
+          const ath = athletes.find((a) => a.id === rec.athleteId);
+          if (ath) {
+            const currentRecent = [...(ath.recentAttendance || [])];
+            const directStatus: 'presente' | 'falta' | 'falta_justificada' =
+              rec.status === 'presente' ? 'presente' : rec.status === 'justificado' ? 'falta_justificada' : 'falta';
+            const exIdx = currentRecent.findIndex((r) => r.date === sessionDate);
+            const newDay: TrainingAttendanceDay = {
+              date: sessionDate,
+              status: directStatus,
+              note: rec.notes || updates.title || targetSession?.title,
+            };
+            if (exIdx >= 0) {
+              currentRecent[exIdx] = newDay;
+            } else {
+              currentRecent.push(newDay);
+            }
+            currentRecent.sort((a, b) => sortDatesDescending(a.date, b.date));
+            const total = currentRecent.length;
+            const pres = currentRecent.filter((r) => r.status === 'presente' || r.status === 'falta_justificada').length;
+            const rate = total > 0 ? Math.round((pres / total) * 100) : 100;
+            saveAthleteRecord({ ...ath, recentAttendance: currentRecent, attendanceRate: rate }).catch(() => {});
+          }
+        }
+      }
+
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `attendance_sessions/${id}`);
@@ -1147,39 +1432,8 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const getAthleteAttendanceStats = (athleteId: string) => {
-    const totalSessions = attendanceSessions.length;
-    let totalPresent = 0;
-
-    const treinos = attendanceSessions.filter((s) => s.type === 'treino');
-    const campeonatos = attendanceSessions.filter((s) => s.type === 'campeonato');
-
-    let treinosPresent = 0;
-    let campeonatosPresent = 0;
-
-    attendanceSessions.forEach((sess) => {
-      const rec = sess.records.find((r) => r.athleteId === athleteId);
-      if (rec && (rec.status === 'presente' || rec.status === 'justificado')) {
-        totalPresent++;
-        if (sess.type === 'treino') treinosPresent++;
-        if (sess.type === 'campeonato') campeonatosPresent++;
-      }
-    });
-
-    const percentage = totalSessions > 0 ? Math.round((totalPresent / totalSessions) * 100) : 0;
-    const treinosPercentage = treinos.length > 0 ? Math.round((treinosPresent / treinos.length) * 100) : 0;
-    const campeonatosPercentage = campeonatos.length > 0 ? Math.round((campeonatosPresent / campeonatos.length) * 100) : 0;
-
-    return {
-      totalSessions,
-      totalPresent,
-      percentage,
-      treinosCount: treinos.length,
-      treinosPresent,
-      treinosPercentage,
-      campeonatosCount: campeonatos.length,
-      campeonatosPresent,
-      campeonatosPercentage,
-    };
+    const targetAthlete = athletes.find((a) => a.id === athleteId);
+    return calculateAthleteAttendanceStats(targetAthlete, attendanceSessions);
   };
 
   // Annual Calendar Events Actions
@@ -1196,6 +1450,13 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       await setDoc(doc(db, 'annual_events', newId), newEvent);
       setAnnualEvents((prev) => [...prev, newEvent].sort((a, b) => a.month - b.month));
+      recordAuditLog({
+        action: 'Criação',
+        targetType: 'Evento',
+        targetId: newId,
+        targetName: newEvent.title,
+        details: `Cadastrou evento: ${newEvent.title} (${newEvent.date}) em ${newEvent.location}`,
+      }).catch(() => {});
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.CREATE, `annual_events/${newId}`);
@@ -1208,11 +1469,19 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     id: string,
     updates: Partial<AnnualCalendarEvent>
   ): Promise<boolean> => {
+    const existingEvt = annualEvents.find((e) => e.id === id);
     try {
       await updateDoc(doc(db, 'annual_events', id), updates);
       setAnnualEvents((prev) =>
         prev.map((evt) => (evt.id === id ? { ...evt, ...updates } : evt)).sort((a, b) => a.month - b.month)
       );
+      recordAuditLog({
+        action: 'Edição',
+        targetType: 'Evento',
+        targetId: id,
+        targetName: updates.title || existingEvt?.title || 'Evento do Calendário',
+        details: `Atualizou evento ${existingEvt?.title || ''}: ${Object.keys(updates).join(', ')}`,
+      }).catch(() => {});
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.UPDATE, `annual_events/${id}`);
@@ -1224,15 +1493,35 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const deleteAnnualEvent = async (id: string): Promise<boolean> => {
+    const evtToDelete = annualEvents.find((e) => e.id === id);
     try {
       await deleteDoc(doc(db, 'annual_events', id));
       setAnnualEvents((prev) => prev.filter((evt) => evt.id !== id));
+      recordAuditLog({
+        action: 'Exclusão',
+        targetType: 'Evento',
+        targetId: id,
+        targetName: evtToDelete?.title || id,
+        details: `Excluiu evento do calendário anual: ${evtToDelete?.title || id}`,
+      }).catch(() => {});
       return true;
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `annual_events/${id}`);
       setAnnualEvents((prev) => prev.filter((evt) => evt.id !== id));
       return true;
     }
+  };
+
+  // Audit Logs Actions
+  const addAuditLog = async (params: RecordAuditParams): Promise<AuditLogItem> => {
+    const item = await recordAuditLog(params);
+    setAuditLogs((prev) => [item, ...prev]);
+    return item;
+  };
+
+  const refreshAuditLogs = async (): Promise<void> => {
+    const list = await fetchAuditLogsFromFirestore();
+    setAuditLogs(list);
   };
 
   return (
@@ -1282,6 +1571,9 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         addAnnualEvent,
         updateAnnualEvent,
         deleteAnnualEvent,
+        auditLogs,
+        addAuditLog,
+        refreshAuditLogs,
       }}
     >
       {children}

@@ -37,6 +37,7 @@ import {
 import { useCommunity } from '../../context/CommunityContext';
 import { AttendanceSession, AttendanceStatus, AttendanceRecordItem, AthleteRecord } from '../../types';
 import { ExportReportModal, ReportType } from '../ExportReportModal';
+import { parseAppDate } from '../../utils/dateAndAttendanceHelper';
 
 const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -308,8 +309,14 @@ export const AttendanceManagerTab: React.FC = () => {
   const getAthleteDayStatus = (athlete: AthleteRecord | undefined, dateStr: string): 'presente' | 'falta' | 'falta_justificada' | 'sem_registro' => {
     if (!athlete) return 'sem_registro';
 
+    const targetParsed = parseAppDate(dateStr);
+    const normalizedTarget = targetParsed ? targetParsed.formattedBR : dateStr;
+
     // 1. Check in athlete's recentAttendance
-    const directRec = (athlete.recentAttendance || []).find((r) => r.date === dateStr);
+    const directRec = (athlete.recentAttendance || []).find((r) => {
+      const p = parseAppDate(r.date);
+      return p ? p.formattedBR === normalizedTarget : r.date === dateStr;
+    });
     if (directRec) {
       if (directRec.status === 'presente' || directRec.status === 'treino_extra') return 'presente';
       if (directRec.status === 'falta_justificada') return 'falta_justificada';
@@ -317,9 +324,12 @@ export const AttendanceManagerTab: React.FC = () => {
     }
 
     // 2. Check in attendanceSessions
-    const session = attendanceSessions.find((s) => s.date === dateStr);
+    const session = attendanceSessions.find((s) => {
+      const p = parseAppDate(s.date);
+      return p ? p.formattedBR === normalizedTarget : s.date === dateStr;
+    });
     if (session) {
-      const rec = session.records.find((r) => r.athleteId === athlete.id);
+      const rec = session.records?.find((r) => r.athleteId === athlete.id);
       if (rec) {
         if (rec.status === 'presente') return 'presente';
         if (rec.status === 'justificado') return 'falta_justificada';

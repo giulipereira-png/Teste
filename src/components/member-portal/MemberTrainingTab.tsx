@@ -18,6 +18,7 @@ import {
 import { AthleteRecord, AttendanceSession } from '../../types';
 import { useCommunity } from '../../context/CommunityContext';
 import { exportReport } from '../../utils/exportReportsHelper';
+import { getUnifiedAthleteAttendance, isDateInMonth } from '../../utils/dateAndAttendanceHelper';
 
 interface MemberTrainingTabProps {
   athlete: AthleteRecord;
@@ -33,44 +34,24 @@ export const MemberTrainingTab: React.FC<MemberTrainingTabProps> = ({ athlete })
   const [filterType, setFilterType] = useState<'all' | 'treino' | 'campeonato'>('all');
   const [filterMonth, setFilterMonth] = useState<string>('all');
 
-  // Compute overall attendance stats from Firestore
+  // Compute overall attendance stats from Firestore using both sources
   const stats = useMemo(() => {
     return getAthleteAttendanceStats(athlete.id);
-  }, [attendanceSessions, athlete.id, getAthleteAttendanceStats]);
+  }, [attendanceSessions, athlete, getAthleteAttendanceStats]);
 
-  // Extract all sessions where this athlete has a record or is tracked
+  // Extract all sessions where this athlete has a record in attendanceSessions OR in athlete.recentAttendance
   const athleteSessions = useMemo(() => {
-    const list: {
-      session: AttendanceSession;
-      status: 'presente' | 'ausente' | 'justificado';
-      notes?: string;
-    }[] = [];
+    return getUnifiedAthleteAttendance(athlete, attendanceSessions);
+  }, [attendanceSessions, athlete]);
 
-    attendanceSessions.forEach((sess) => {
-      const rec = sess.records?.find((r) => r.athleteId === athlete.id);
-      if (rec) {
-        list.push({
-          session: sess,
-          status: rec.status,
-          notes: rec.notes || sess.notes,
-        });
-      }
-    });
-
-    // Sort by session date descending
-    list.sort((a, b) => (b.session.date || '').localeCompare(a.session.date || ''));
-    return list;
-  }, [attendanceSessions, athlete.id]);
-
-  // Filtered sessions
+  // Filtered sessions with cross-browser date support (Safari, Chrome, Firefox, mobile)
   const filteredSessions = useMemo(() => {
     return athleteSessions.filter((item) => {
-      if (filterType !== 'all' && item.session.type !== filterType) {
+      if (filterType !== 'all' && item.type !== filterType) {
         return false;
       }
       if (filterMonth !== 'all') {
-        const itemMonth = new Date(item.session.date).getMonth();
-        if (!isNaN(itemMonth) && itemMonth !== Number(filterMonth)) {
+        if (!isDateInMonth(item.date, Number(filterMonth))) {
           return false;
         }
       }
@@ -258,14 +239,14 @@ export const MemberTrainingTab: React.FC<MemberTrainingTabProps> = ({ athlete })
               <p className="text-[11px] text-slate-500">Assim que a comissão técnica realizar as chamadas nas raias, elas serão exibidas aqui.</p>
             </div>
           ) : (
-            filteredSessions.map(({ session, status, notes }, idx) => (
+            filteredSessions.map((item, idx) => (
               <div
-                key={session.id || idx}
+                key={item.id || idx}
                 className="p-4 rounded-xl bg-black/40 border border-white/5 hover:border-white/10 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
               >
                 <div className="flex items-start gap-3">
                   <div className="p-2 rounded-lg bg-[#1e3a5f]/40 border border-white/5 text-[#d4af37] shrink-0 mt-0.5">
-                    {session.type === 'campeonato' ? (
+                    {item.type === 'campeonato' ? (
                       <Trophy className="w-4 h-4 text-amber-400" />
                     ) : (
                       <Waves className="w-4 h-4 text-cyan-400" />
@@ -274,32 +255,32 @@ export const MemberTrainingTab: React.FC<MemberTrainingTabProps> = ({ athlete })
 
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-white text-sm">{session.title}</span>
+                      <span className="font-bold text-white text-sm">{item.title}</span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        session.type === 'campeonato' 
+                        item.type === 'campeonato' 
                           ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
                           : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
                       }`}>
-                        {session.type === 'campeonato' ? 'Campeonato Oficial' : 'Treino Aquático'}
+                        {item.type === 'campeonato' ? 'Campeonato Oficial' : 'Treino Aquático'}
                       </span>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
                       <span className="font-mono text-[#f3e5ab] font-medium flex items-center gap-1">
                         <CalendarIcon className="w-3 h-3 text-[#d4af37]" />
-                        {session.date}
+                        {item.date}
                       </span>
-                      {session.location && (
+                      {item.location && (
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3 h-3 text-slate-500" />
-                          {session.location}
+                          {item.location}
                         </span>
                       )}
                     </div>
 
-                    {notes && (
+                    {item.notes && (
                       <p className="text-[11px] text-slate-300 bg-white/5 p-2 rounded-lg mt-1 border border-white/5">
-                        <strong className="text-[#f3e5ab]">Obs. do Treinador:</strong> {notes}
+                        <strong className="text-[#f3e5ab]">Obs. do Treinador:</strong> {item.notes}
                       </p>
                     )}
                   </div>
@@ -307,12 +288,12 @@ export const MemberTrainingTab: React.FC<MemberTrainingTabProps> = ({ athlete })
 
                 {/* Status Read-only badge */}
                 <div className="shrink-0 self-start sm:self-center">
-                  {status === 'presente' ? (
+                  {item.status === 'presente' ? (
                     <span className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-xs flex items-center gap-1.5 shadow-sm">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                       <span>PRESENTE</span>
                     </span>
-                  ) : status === 'justificado' ? (
+                  ) : item.status === 'justificado' ? (
                     <span className="px-3 py-1.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold text-xs flex items-center gap-1.5 shadow-sm">
                       <AlertCircle className="w-3.5 h-3.5 text-amber-400" />
                       <span>JUSTIFICADO</span>
