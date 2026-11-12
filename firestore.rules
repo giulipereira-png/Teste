@@ -131,5 +131,13 @@ service cloud.firestore {
         isValidString(request.resource.data.authorName, 2, 120);
       allow update, delete: if false; // Logs são estritamente imutáveis para garantir validade jurídica e integridade
     }
+
+    // 16. Apoiadores, patrocinadores e parceiros oficiais
+    match /sponsors/{sponsorId} {
+      allow read: if true;
+      allow create, update: if sponsorId.size() <= 128 &&
+        isValidString(request.resource.data.name, 2, 150);
+      allow delete: if true;
+    }
   }
 }

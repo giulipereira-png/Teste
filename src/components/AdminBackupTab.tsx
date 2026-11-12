@@ -29,7 +29,7 @@ import {
 import { FirestoreBackupPackage } from '../types';
 
 export const AdminBackupTab: React.FC = () => {
-  const { athletes, annualEvents, cheers, newsPosts, emailLogs, attendanceSessions, auditLogs } = useCommunity();
+  const { athletes, annualEvents, cheers, newsPosts, emailLogs, attendanceSessions, auditLogs, sponsors } = useCommunity();
   const { photos, galleryPhotos, adminUsers, currentAdminProfile } = usePhotos();
 
   const [isExportingFull, setIsExportingFull] = useState(false);
@@ -83,6 +83,7 @@ export const AdminBackupTab: React.FC = () => {
         galleryPhotos,
         sitePhotos: photos,
         auditLogs,
+        sponsors,
         currentUser: currentAdminProfile ? {
           name: currentAdminProfile.name,
           email: currentAdminProfile.email,

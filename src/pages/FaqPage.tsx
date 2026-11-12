@@ -110,13 +110,23 @@ export const FaqPage: React.FC<FaqPageProps> = ({
 
           <div className="flex flex-wrap items-center gap-3 shrink-0">
             <a
-              href="https://wa.me/5511998809708"
+              href="https://wa.me/5511981047553"
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow"
             >
               <Phone className="w-4 h-4" />
-              <span>WhatsApp (11) 99880-9708</span>
+              <span>WhatsApp (11) 98104-7553</span>
+            </a>
+
+            <a
+              href="https://wa.me/5511988231504"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow"
+            >
+              <Phone className="w-4 h-4" />
+              <span>WhatsApp (11) 98823-1504</span>
             </a>
 
             <button

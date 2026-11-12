@@ -1,4 +1,4 @@
-import { AthleteRecord, AnnualCalendarEvent, CommunityCheer, AttendanceSession, NewsPost, EmailNotificationLog, AdminUser, AuditLogItem, FirestoreBackupPackage } from '../types';
+import { AthleteRecord, AnnualCalendarEvent, CommunityCheer, AttendanceSession, NewsPost, EmailNotificationLog, AdminUser, AuditLogItem, FirestoreBackupPackage, SponsorItem } from '../types';
 import { recordAuditLog } from './auditService';
 
 export interface BackupGenerationOptions {
@@ -12,6 +12,7 @@ export interface BackupGenerationOptions {
   galleryPhotos?: any[];
   sitePhotos?: Record<string, string>;
   auditLogs?: AuditLogItem[];
+  sponsors?: SponsorItem[];
   currentUser?: {
     name: string;
     email: string;
@@ -65,7 +66,8 @@ export const generateFullFirestoreBackup = async (
     (options.emailLogs?.length || 0) +
     safeAdminUsers.length +
     (options.galleryPhotos?.length || 0) +
-    (options.auditLogs?.length || 0);
+    (options.auditLogs?.length || 0) +
+    (options.sponsors?.length || 0);
 
   const backupPackage: FirestoreBackupPackage = {
     metadata: {
@@ -75,7 +77,7 @@ export const generateFullFirestoreBackup = async (
       exportedDateFormatted: now.toLocaleString('pt-BR'),
       exportedBy: {
         name: options.currentUser?.name || 'Administrador ACEDEP',
-        email: options.currentUser?.email || 'admin@acedep.org.br',
+        email: options.currentUser?.email || 'acedep@hotmail.com',
         role: options.currentUser?.role || 'Super Admin',
       },
       formatVersion: '1.0',
@@ -91,6 +93,7 @@ export const generateFullFirestoreBackup = async (
         galleryPhotos: options.galleryPhotos?.length || 0,
         sitePhotosCount: Object.keys(options.sitePhotos || {}).length,
         auditLogs: options.auditLogs?.length || 0,
+        sponsors: options.sponsors?.length || 0,
       },
     },
     data: {
@@ -104,6 +107,7 @@ export const generateFullFirestoreBackup = async (
       galleryPhotos: options.galleryPhotos || [],
       sitePhotos: options.sitePhotos || {},
       auditLogs: options.auditLogs || [],
+      sponsors: options.sponsors || [],
     },
   };
 

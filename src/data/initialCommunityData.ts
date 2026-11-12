@@ -1,4 +1,4 @@
-import { NewsPost, CommunityCheer, AthleteRecord, AttendanceSession, AdminUser, AnnualCalendarEvent } from '../types';
+import { NewsPost, CommunityCheer, AthleteRecord, AttendanceSession, AdminUser, AnnualCalendarEvent, SponsorItem } from '../types';
 
 export const INITIAL_ANNUAL_EVENTS: AnnualCalendarEvent[] = [
   {
@@ -661,3 +661,55 @@ export const INITIAL_ATHLETES: AthleteRecord[] = [
     createdAt: '2026-01-05T09:00:00Z',
   },
 ];
+
+export const INITIAL_SPONSORS: SponsorItem[] = [
+  {
+    id: 'sponsor-cpb',
+    name: 'Comitê Paralímpico Brasileiro (CPB)',
+    category: 'Apoiador Institucional',
+    logoUrl: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=400&q=80',
+    websiteUrl: 'https://cpb.org.br',
+    description: 'Apoio institucional e utilização da infraestrutura esportiva de alta performance no Centro Paralímpico Brasileiro em São Paulo.',
+    sinceYear: '2022',
+    isActive: true,
+    order: 1,
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'sponsor-cbdi',
+    name: 'CBDI - Confederação Brasileira de Desportos para Deficientes Intelectuais',
+    category: 'Apoiador Institucional',
+    logoUrl: 'https://images.unsplash.com/photo-1519315901367-f34ff9154487?auto=format&fit=crop&w=400&q=80',
+    websiteUrl: 'https://cbdi.org.br',
+    description: 'Chancela das classes de elegibilidade esportiva S14 e S21 e suporte para rankings estaduais e nacionais.',
+    sinceYear: '2023',
+    isActive: true,
+    order: 2,
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'sponsor-master-slot',
+    name: 'Espaço Patrocinador Master',
+    category: 'Patrocinador Master',
+    logoUrl: '',
+    websiteUrl: '',
+    description: 'Espaço reservado para empresa parceira estampar uniformes de competição, toucas e banners nos campeonatos oficiais.',
+    sinceYear: '2026',
+    isActive: true,
+    order: 3,
+    createdAt: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: 'sponsor-amiga-slot',
+    name: 'Espaço Empresa Amiga do Paradesporto',
+    category: 'Empresa Amiga do Paradesporto',
+    logoUrl: '',
+    websiteUrl: '',
+    description: 'Apoio continuado com doações diretas, alimentação dos atletas em viagens ou logística de transporte.',
+    sinceYear: '2026',
+    isActive: true,
+    order: 4,
+    createdAt: '2026-01-01T00:00:00Z',
+  }
+];
+

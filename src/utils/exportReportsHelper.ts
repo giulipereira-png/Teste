@@ -10,7 +10,8 @@ export const INSTITUTION_INFO = {
   cnpj: '12.579.030/0001-83',
   location: 'Centro Paralímpico Brasileiro (CPB) - Rod. dos Imigrantes, km 11,5 - São Paulo/SP',
   program: 'Programa de Alto Rendimento e Formação - Natação Paralímpica S14 / CBDI / CPB',
-  contact: 'contato@acedep.org.br',
+  contact: 'acedep@hotmail.com',
+  phones: ['(11) 98104-7553', '(11) 98823-1504'],
 };
 
 export type ReportType = 

@@ -20,6 +20,7 @@ import { CalendarPage } from './pages/CalendarPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { FaqPage } from './pages/FaqPage';
 import { CommunityPage } from './pages/CommunityPage';
+import { SponsorsPage } from './pages/SponsorsPage';
 import { AdminPage } from './pages/AdminPage';
 
 // Action & Portal Modals
@@ -53,7 +54,7 @@ const SecuritySessionWatcher: React.FC = () => {
   return null;
 };
 
-export type AppPage = 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'admin';
+export type AppPage = 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'apoiadores' | 'admin';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<AppPage>(() => {
@@ -69,6 +70,7 @@ export default function App() {
     if (path === 'galeria' || hash === 'galeria') return 'galeria';
     if (path === 'faq' || hash === 'faq') return 'faq';
     if (path === 'comunidade' || hash === 'comunidade') return 'comunidade';
+    if (path === 'apoiadores' || path === 'parceiros' || path === 'patrocinadores' || hash === 'apoiadores' || hash === 'parceiros') return 'apoiadores';
     return 'home';
   });
 
@@ -182,6 +184,14 @@ export default function App() {
                 onBackToHome={() => handleNavigateToPage('home')}
                 onOpenSupportModal={() => setSupportModalOpen(true)}
                 onNavigateToPage={handleNavigateToPage}
+              />
+            )}
+
+            {currentPage === 'apoiadores' && (
+              <SponsorsPage
+                onBackToHome={() => handleNavigateToPage('home')}
+                onOpenSupportModal={() => setSupportModalOpen(true)}
+                onOpenContactModal={() => setContactModalOpen(true)}
               />
             )}
 

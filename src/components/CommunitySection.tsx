@@ -21,7 +21,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Play,
-  Pause
+  Pause,
+  Newspaper,
+  Image as ImageIcon,
+  Images,
+  Upload
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { usePhotos } from '../context/PhotosContext';
@@ -30,6 +34,7 @@ import { NewsCategory, CommunityCheer } from '../types';
 export const CommunitySection: React.FC = () => {
   const { 
     newsPosts, 
+    addNewsPost,
     cheers, 
     addCheer, 
     updateCheer,
@@ -39,9 +44,103 @@ export const CommunitySection: React.FC = () => {
     setSelectedNewsForModal,
     setCoachManagerModalOpen
   } = useCommunity();
-  const { isAdminAuthenticated, openAdminModal } = usePhotos();
+  const { isAdminAuthenticated, openAdminModal, galleryPhotos } = usePhotos();
 
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  // News Publishing Form State (Directly from Community with Gallery & Device Upload)
+  const [showNewsForm, setShowNewsForm] = useState(false);
+  const [newNewsTitle, setNewNewsTitle] = useState('');
+  const [newNewsCategory, setNewNewsCategory] = useState<NewsCategory>('Resultados & Provas');
+  const [newNewsSummary, setNewNewsSummary] = useState('');
+  const [newNewsContent, setNewNewsContent] = useState('');
+  const [newNewsCoverUrl, setNewNewsCoverUrl] = useState('');
+  const [newNewsSelectedGalleryTitle, setNewNewsSelectedGalleryTitle] = useState<string | null>(null);
+  const [showGalleryPicker, setShowGalleryPicker] = useState(false);
+  const [newNewsNotifyEmail, setNewNewsNotifyEmail] = useState(true);
+  const [isSubmittingNews, setIsSubmittingNews] = useState(false);
+  const [newsSubmitSuccess, setNewsSubmitSuccess] = useState(false);
+  const communityNewsFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleCommunityNewsPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (PNG, JPG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDimension = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.85);
+          setNewNewsCoverUrl(compressed);
+          setNewNewsSelectedGalleryTitle(file.name);
+          setShowGalleryPicker(false);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCommunityNewsSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newNewsTitle.trim() || !newNewsContent.trim()) return;
+
+    setIsSubmittingNews(true);
+    const success = await addNewsPost(
+      {
+        title: newNewsTitle.trim(),
+        summary: newNewsSummary.trim() || newNewsTitle.trim(),
+        content: newNewsContent.trim(),
+        category: newNewsCategory,
+        coverUrl: newNewsCoverUrl.trim() || 'https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=1000&q=80',
+        date: new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
+        author: 'Comissão Técnica ACEDEP',
+        authorRole: 'Comissão Técnica ACEDEP',
+        tags: ['Natação Paralímpica', 'S14', 'ACEDEP'],
+      },
+      newNewsNotifyEmail
+    );
+    setIsSubmittingNews(false);
+
+    if (success) {
+      setNewsSubmitSuccess(true);
+      setNewNewsTitle('');
+      setNewNewsSummary('');
+      setNewNewsContent('');
+      setNewNewsCoverUrl('');
+      setNewNewsSelectedGalleryTitle(null);
+      setShowGalleryPicker(false);
+      setTimeout(() => {
+        setNewsSubmitSuccess(false);
+        setShowNewsForm(false);
+      }, 3000);
+    }
+  };
   
   // Cheer Form State & Carousel State
   const [showCheerForm, setShowCheerForm] = useState(false);
@@ -180,6 +279,348 @@ export const CommunitySection: React.FC = () => {
           <p className="text-slate-300 text-sm sm:text-base leading-relaxed">
             Acompanhe o dia a dia dos nossos nadadores com deficiência intelectual (Classe S14), comunicados da comissão técnica e resultados de competições no Centro Paralímpico Brasileiro.
           </p>
+
+          {/* Action button to publish news directly on community */}
+          <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (!isAdminAuthenticated) {
+                  openAdminModal();
+                } else {
+                  setShowNewsForm(!showNewsForm);
+                }
+              }}
+              className="px-4 py-2.5 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs sm:text-sm font-bold transition-all shadow-lg shadow-[#d4af37]/20 flex items-center gap-2 cursor-pointer active:scale-95"
+            >
+              <Newspaper className="w-4 h-4" />
+              <span>{showNewsForm ? 'Fechar Publicação de Notícia' : '+ Publicar Notícia no Mural'}</span>
+            </button>
+
+            {isAdminAuthenticated && (
+              <span className="text-[11px] text-emerald-400 font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Modo Treinador / Admin Ativo</span>
+              </span>
+            )}
+          </div>
+
+          {/* Expandable News Form with direct Gallery photo attachment */}
+          {showNewsForm && (
+            <div className="w-full max-w-3xl mx-auto p-5 sm:p-7 rounded-3xl bg-[#0a192f] border border-[#d4af37]/60 shadow-2xl space-y-4 text-left animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between border-b border-[#1e3a5f] pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-[#d4af37]/20 text-[#d4af37]">
+                    <Newspaper className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-white font-serif">
+                      Publicar Nova Notícia no Mural
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Inclua título, texto e selecione a foto de capa diretamente da galeria da ACEDEP ou do seu dispositivo.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowNewsForm(false)}
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCommunityNewsSubmit} className="space-y-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="text-slate-300 block mb-1 font-semibold">
+                      Título da Notícia *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={newNewsTitle}
+                      onChange={(e) => setNewNewsTitle(e.target.value)}
+                      placeholder="Ex: ACEDEP conquista ouro nos 100m livre S14"
+                      className="w-full px-3 py-2 rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1 font-semibold">
+                      Categoria *
+                    </label>
+                    <select
+                      value={newNewsCategory}
+                      onChange={(e) => setNewNewsCategory(e.target.value as NewsCategory)}
+                      className="w-full px-3 py-2 rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
+                    >
+                      <option value="Resultados & Provas">Resultados & Provas</option>
+                      <option value="Comunicados Oficiais">Comunicados Oficiais</option>
+                      <option value="Treinos & Calendário">Treinos & Calendário</option>
+                      <option value="Eventos & Festivais">Eventos & Festivais</option>
+                      <option value="Histórias de Superação">Histórias de Superação</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-300 block mb-1 font-semibold">
+                    Resumo Rápido (Subtítulo para o card)
+                  </label>
+                  <input
+                    type="text"
+                    value={newNewsSummary}
+                    onChange={(e) => setNewNewsSummary(e.target.value)}
+                    placeholder="Breve frase descritiva que resume a notícia"
+                    className="w-full px-3 py-2 rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                  />
+                </div>
+
+                {/* Photo selection section: Choose from ACEDEP Gallery or Device Upload */}
+                <div className="p-4 rounded-2xl bg-black/40 border border-[#1e3a5f] space-y-2.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-slate-200 font-semibold flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-[#d4af37]" />
+                      <span>Foto de Capa da Notícia</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Direto da Galeria ou Upload)</span>
+                    </label>
+
+                    {newNewsCoverUrl && (
+                      <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Foto selecionada</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Hidden file input for device photo upload */}
+                  <input
+                    ref={communityNewsFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleCommunityNewsPhotoUpload}
+                    className="hidden"
+                  />
+
+                  {/* Action buttons to choose from gallery or upload */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowGalleryPicker(!showGalleryPicker)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-sm ${
+                        showGalleryPicker
+                          ? 'bg-[#d4af37] text-[#060e1c] border-[#d4af37]'
+                          : 'bg-white/10 hover:bg-white/15 text-white border-white/20 hover:border-[#d4af37]'
+                      }`}
+                    >
+                      <Images className="w-4 h-4 text-[#d4af37]" />
+                      <span>Escolher da Galeria da ACEDEP ({galleryPhotos.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => communityNewsFileInputRef.current?.click()}
+                      className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 hover:border-[#d4af37] text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Upload className="w-4 h-4 text-[#d4af37]" />
+                      <span>Anexar Foto do Celular / PC</span>
+                    </button>
+
+                    {newNewsCoverUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewNewsCoverUrl('');
+                          setNewNewsSelectedGalleryTitle(null);
+                        }}
+                        className="px-2.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold cursor-pointer flex items-center gap-1"
+                        title="Remover foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Remover</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Expandable Gallery Grid Picker */}
+                  {showGalleryPicker && (
+                    <div className="p-3.5 rounded-xl bg-[#081528] border border-[#d4af37]/40 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Images className="w-3.5 h-3.5 text-[#d4af37]" />
+                          <span>Clique na foto da galeria que deseja usar como capa da notícia:</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowGalleryPicker(false)}
+                          className="text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded bg-white/5"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+
+                      {galleryPhotos.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-3 text-center">
+                          Nenhuma foto cadastrada na galeria no momento. Use o botão "Anexar Foto do Celular / PC".
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-56 overflow-y-auto p-1 scrollbar-thin">
+                          {galleryPhotos.map((photo) => {
+                            const isSelected = newNewsCoverUrl === photo.url;
+                            return (
+                              <div
+                                key={photo.id}
+                                onClick={() => {
+                                  setNewNewsCoverUrl(photo.url);
+                                  setNewNewsSelectedGalleryTitle(photo.title);
+                                  setShowGalleryPicker(false);
+                                }}
+                                className={`group relative rounded-xl overflow-hidden aspect-video bg-black/60 border cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'border-[#d4af37] ring-2 ring-[#d4af37] shadow-lg'
+                                    : 'border-white/10 hover:border-[#d4af37]/60 hover:scale-[1.03]'
+                                }`}
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={photo.title}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-1.5">
+                                  <span className="text-[10px] text-white font-medium truncate block">
+                                    {photo.title}
+                                  </span>
+                                  <span className="text-[8px] text-[#f3e5ab] truncate">
+                                    {photo.category}
+                                  </span>
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-[#d4af37] text-[#060e1c] shadow">
+                                    <Check className="w-3 h-3 stroke-3" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Selected Photo Live Preview */}
+                  {newNewsCoverUrl ? (
+                    <div className="p-3 rounded-xl bg-black/60 border border-white/15 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-16 h-12 rounded-lg bg-black overflow-hidden shrink-0 border border-white/20">
+                          <img
+                            src={newNewsCoverUrl}
+                            alt="Pré-visualização"
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">
+                            {newNewsSelectedGalleryTitle || 'Foto selecionada'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {newNewsCoverUrl.startsWith('data:image') ? 'Foto do dispositivo (otimizada)' : newNewsCoverUrl}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowGalleryPicker(true)}
+                        className="text-xs text-[#d4af37] hover:underline font-semibold shrink-0 cursor-pointer"
+                      >
+                        Trocar Foto
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-400">
+                      <span>Ou cole um link direto de imagem: </span>
+                      <input
+                        type="url"
+                        value={newNewsCoverUrl}
+                        onChange={(e) => {
+                          setNewNewsCoverUrl(e.target.value);
+                          setNewNewsSelectedGalleryTitle(null);
+                        }}
+                        placeholder="https://images.unsplash.com/..."
+                        className="mt-1 w-full px-3 py-1.5 text-xs rounded-lg bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-slate-300 block mb-1 font-semibold">
+                    Conteúdo Completo da Notícia *
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={newNewsContent}
+                    onChange={(e) => setNewNewsContent(e.target.value)}
+                    placeholder="Escreva os detalhes da notícia, tempos de prova, convocação de atletas ou recados..."
+                    className="w-full px-3 py-2 rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] resize-y"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-slate-300">
+                  <input
+                    type="checkbox"
+                    id="communityNotifyNewsEmail"
+                    checked={newNewsNotifyEmail}
+                    onChange={(e) => setNewNewsNotifyEmail(e.target.checked)}
+                    className="rounded border-[#1e3a5f] text-[#d4af37] focus:ring-[#d4af37]"
+                  />
+                  <label htmlFor="communityNotifyNewsEmail" className="cursor-pointer">
+                    📧 Enviar aviso desta notícia por e-mail automaticamente a todos os pais e responsáveis
+                  </label>
+                </div>
+
+                {newsSubmitSuccess && (
+                  <p className="text-xs text-emerald-400 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Notícia publicada com sucesso no mural da ACEDEP!</span>
+                  </p>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#1e3a5f]">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewsForm(false)}
+                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-slate-300 font-semibold"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingNews}
+                    className="px-5 py-2 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] font-bold shadow-md transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isSubmittingNews ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Publicando...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Publicar Notícia no Mural</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* 1. PINNED / FEATURED HERO NEWS CARD */}

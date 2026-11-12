@@ -192,6 +192,24 @@
         "status": { "type": "string" }
       },
       "required": ["id", "name", "email", "role"]
+    },
+    "Sponsor": {
+      "title": "Sponsor",
+      "description": "Apoiadores, patrocinadores e parceiros oficiais da ACEDEP",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "websiteUrl": { "type": "string" },
+        "description": { "type": "string" },
+        "sinceYear": { "type": "string" },
+        "isActive": { "type": "boolean" },
+        "order": { "type": "number" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "category", "isActive"]
     }
   },
   "firestore": {
@@ -234,6 +252,10 @@
     "/admin_users/{userId}": {
       "schema": "AdminUser",
       "description": "Usuários e comissão técnica com acesso administrativo"
+    },
+    "/sponsors/{sponsorId}": {
+      "schema": "Sponsor",
+      "description": "Logotipos, dados e links de apoiadores e parceiros da instituição"
     }
   }
 }

@@ -263,7 +263,7 @@ export interface AdminUser {
 }
 
 export type AuditActionType = 'Criação' | 'Edição' | 'Exclusão' | 'Backup' | 'Presença' | 'Exportação' | 'Login';
-export type AuditTargetType = 'Atleta' | 'Evento' | 'Recado' | 'Notícia' | 'Presença' | 'Documento' | 'Sistema' | 'Administrador' | 'Backup';
+export type AuditTargetType = 'Atleta' | 'Evento' | 'Recado' | 'Notícia' | 'Presença' | 'Documento' | 'Sistema' | 'Administrador' | 'Backup' | 'Apoiador';
 
 export interface AuditLogItem {
   id: string;
@@ -303,6 +303,7 @@ export interface FirestoreBackupPackage {
       galleryPhotos: number;
       sitePhotosCount: number;
       auditLogs: number;
+      sponsors?: number;
     };
   };
   data: {
@@ -316,6 +317,19 @@ export interface FirestoreBackupPackage {
     galleryPhotos: any[];
     sitePhotos: Record<string, string>;
     auditLogs: AuditLogItem[];
+    sponsors?: SponsorItem[];
   };
 }
 
+export interface SponsorItem {
+  id: string;
+  name: string;
+  category: 'Patrocinador Master' | 'Apoiador Institucional' | 'Parceiro Técnico' | 'Apoio Alimentar & Saúde' | 'Empresa Amiga do Paradesporto';
+  logoUrl?: string; // URL da imagem ou Data URL base64 do logotipo
+  websiteUrl?: string; // Link para o site oficial da empresa (opcional)
+  description?: string; // Breve descrição da empresa ou contribuição
+  sinceYear?: string; // Ex: '2024'
+  isActive: boolean;
+  order?: number;
+  createdAt: string;
+}

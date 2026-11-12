@@ -18,7 +18,7 @@ import { useCommunity } from '../context/CommunityContext';
 
 interface NavbarProps {
   currentPage?: string;
-  onNavigateToPage: (page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade') => void;
+  onNavigateToPage: (page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'apoiadores') => void;
   onOpenSupportModal: () => void;
   onOpenContactModal: () => void;
   onOpenMemberPortal: () => void;
@@ -72,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [currentPage]);
 
-  const handleNavClick = (pageId: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade', hash?: string) => {
+  const handleNavClick = (pageId: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'apoiadores', hash?: string) => {
     setMobileMenuOpen(false);
     onNavigateToPage(pageId);
     if (pageId === 'home' && hash) {
@@ -86,13 +86,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   // Primary navigation items for clean layout
-  const navLinks: Array<{ name: string; page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade'; hash?: string }> = [
+  const navLinks: Array<{ name: string; page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'apoiadores'; hash?: string }> = [
     { name: 'Início', page: 'home', hash: '#home' },
     { name: 'Sobre Nós', page: 'sobre' },
     { name: 'Nossa Equipe', page: 'equipe' },
     { name: 'Calendário 2026', page: 'calendario' },
     { name: 'Galeria', page: 'galeria' },
     { name: 'Comunidade', page: 'comunidade' },
+    { name: 'Apoiadores', page: 'apoiadores' },
     { name: 'FAQ', page: 'faq' },
   ];
 
@@ -121,21 +122,36 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
-          <div className="flex items-center gap-4 text-[11px] sm:text-xs">
+          <div className="flex items-center gap-3 sm:gap-4 text-[11px] sm:text-xs">
             <a 
-              href="mailto:giuli.pereira@gmail.com" 
+              href="mailto:acedep@hotmail.com" 
               className="hidden md:flex items-center gap-1 text-slate-300 hover:text-[#d4af37] transition-colors"
             >
               <Mail className="w-3.5 h-3.5 text-[#d4af37]" />
-              giuli.pereira@gmail.com
+              acedep@hotmail.com
             </a>
-            <a 
-              href="tel:11998809708"
-              className="flex items-center gap-1 text-slate-300 hover:text-[#d4af37] transition-colors cursor-pointer"
-            >
-              <Phone className="w-3.5 h-3.5 text-[#d4af37]" />
-              (11) 99880-9708
-            </a>
+            <div className="flex items-center gap-2">
+              <a 
+                href="https://wa.me/5511981047553"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-slate-300 hover:text-[#d4af37] transition-colors cursor-pointer"
+                title="WhatsApp / Celular ACEDEP"
+              >
+                <Phone className="w-3.5 h-3.5 text-[#d4af37]" />
+                <span>(11) 98104-7553</span>
+              </a>
+              <span className="hidden sm:inline text-slate-600">|</span>
+              <a 
+                href="https://wa.me/5511988231504"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:flex items-center gap-1 text-slate-300 hover:text-[#d4af37] transition-colors cursor-pointer"
+                title="WhatsApp / Celular ACEDEP"
+              >
+                <span>(11) 98823-1504</span>
+              </a>
+            </div>
 
             {/* Admin shortcut visible on desktop & mobile top bar */}
             <button

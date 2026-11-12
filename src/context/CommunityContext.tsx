@@ -24,7 +24,8 @@ import {
   EmailNotificationLog,
   AttendanceSession,
   AnnualCalendarEvent,
-  AuditLogItem
+  AuditLogItem,
+  SponsorItem
 } from '../types';
 import { calculateAthleteAttendanceStats, parseAppDate, sortDatesDescending } from '../utils/dateAndAttendanceHelper';
 import { recordAuditLog, fetchAuditLogsFromFirestore, RecordAuditParams } from '../services/auditService';
@@ -33,7 +34,8 @@ import {
   INITIAL_COMMUNITY_CHEERS, 
   INITIAL_ATHLETES,
   INITIAL_ATTENDANCE_SESSIONS,
-  INITIAL_ANNUAL_EVENTS
+  INITIAL_ANNUAL_EVENTS,
+  INITIAL_SPONSORS
 } from '../data/initialCommunityData';
 
 const INITIAL_EMAIL_LOGS: EmailNotificationLog[] = [
@@ -136,6 +138,12 @@ interface CommunityContextType {
   auditLogs: AuditLogItem[];
   addAuditLog: (params: RecordAuditParams) => Promise<AuditLogItem>;
   refreshAuditLogs: () => Promise<void>;
+
+  // Sponsors & Supporters
+  sponsors: SponsorItem[];
+  addSponsor: (sponsor: Omit<SponsorItem, 'id' | 'createdAt'>) => Promise<boolean>;
+  updateSponsor: (id: string, updates: Partial<SponsorItem>) => Promise<boolean>;
+  deleteSponsor: (id: string) => Promise<boolean>;
 }
 
 const CommunityContext = createContext<CommunityContextType | undefined>(undefined);
@@ -167,6 +175,16 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [emailLogs, setEmailLogs] = useState<EmailNotificationLog[]>(INITIAL_EMAIL_LOGS);
   const [annualEvents, setAnnualEvents] = useState<AnnualCalendarEvent[]>(INITIAL_ANNUAL_EVENTS);
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [sponsors, setSponsors] = useState<SponsorItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('acedep_cached_sponsors');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INITIAL_SPONSORS;
+  });
   
   // Authenticated Guardian State
   const [currentAthleteId, setCurrentAthleteId] = useState<string | null>(() => {
@@ -202,6 +220,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     let unsubscribeAttendance: () => void = () => {};
     let unsubscribeAnnualEvents: () => void = () => {};
     let unsubscribeAuditLogs: () => void = () => {};
+    let unsubscribeSponsors: () => void = () => {};
 
     const setupFirestore = async () => {
       // 1. Sync News
@@ -452,6 +471,47 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           handleFirestoreError(error, OperationType.LIST, 'audit_logs');
         }
       );
+
+      // 8. Sync Sponsors & Supporters (Apoiadores e Patrocinadores)
+      const sponsorsInitDoc = doc(db, 'settings', 'sponsors_init');
+      getDoc(sponsorsInitDoc)
+        .then(async (snap) => {
+          if (!snap.exists()) {
+            try {
+              for (const sp of INITIAL_SPONSORS) {
+                await setDoc(doc(db, 'sponsors', sp.id), cleanFirestoreData(sp));
+              }
+              await setDoc(sponsorsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
+            } catch (e) {
+              handleFirestoreError(e, OperationType.WRITE, 'sponsors_seed');
+            }
+          }
+        })
+        .catch((e) => {
+          handleFirestoreError(e, OperationType.GET, 'settings/sponsors_init');
+        });
+
+      unsubscribeSponsors = onSnapshot(
+        collection(db, 'sponsors'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list: SponsorItem[] = [];
+            snapshot.forEach((docSnap) => {
+              list.push({ ...docSnap.data(), id: docSnap.id } as SponsorItem);
+            });
+            list.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+            setSponsors(list);
+            try {
+              localStorage.setItem('acedep_cached_sponsors', JSON.stringify(list));
+            } catch {}
+          } else {
+            setSponsors(INITIAL_SPONSORS);
+          }
+        },
+        (error) => {
+          handleFirestoreError(error, OperationType.LIST, 'sponsors');
+        }
+      );
     };
 
     setupFirestore();
@@ -464,6 +524,7 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       unsubscribeAttendance();
       unsubscribeAnnualEvents();
       unsubscribeAuditLogs();
+      unsubscribeSponsors();
     };
   }, []);
 
@@ -1524,6 +1585,71 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setAuditLogs(list);
   };
 
+  // Sponsors & Supporters Actions
+  const addSponsor = async (data: Omit<SponsorItem, 'id' | 'createdAt'>): Promise<boolean> => {
+    try {
+      const id = `sponsor-${Date.now()}`;
+      const newSponsor: SponsorItem = {
+        ...data,
+        id,
+        createdAt: new Date().toISOString(),
+      };
+      await setDoc(doc(db, 'sponsors', id), cleanFirestoreData(newSponsor));
+      setSponsors((prev) => [...prev, newSponsor].sort((a, b) => (a.order ?? 99) - (b.order ?? 99)));
+      recordAuditLog({
+        action: 'Criação',
+        targetType: 'Apoiador',
+        targetId: id,
+        targetName: newSponsor.name,
+        details: `Cadastrou apoiador/patrocinador: ${newSponsor.name} (${newSponsor.category})`,
+      }).catch(() => {});
+      return true;
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, 'sponsors');
+      return false;
+    }
+  };
+
+  const updateSponsor = async (id: string, updates: Partial<SponsorItem>): Promise<boolean> => {
+    try {
+      await updateDoc(doc(db, 'sponsors', id), cleanFirestoreData(updates));
+      setSponsors((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, ...updates } : s)).sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+      );
+      recordAuditLog({
+        action: 'Edição',
+        targetType: 'Apoiador',
+        targetId: id,
+        targetName: updates.name || id,
+        details: `Atualizou apoiador/patrocinador: ${updates.name || id}`,
+      }).catch(() => {});
+      return true;
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `sponsors/${id}`);
+      return false;
+    }
+  };
+
+  const deleteSponsor = async (id: string): Promise<boolean> => {
+    try {
+      const target = sponsors.find((s) => s.id === id);
+      await deleteDoc(doc(db, 'sponsors', id));
+      setSponsors((prev) => prev.filter((s) => s.id !== id));
+      recordAuditLog({
+        action: 'Exclusão',
+        targetType: 'Apoiador',
+        targetId: id,
+        targetName: target?.name || id,
+        details: `Excluiu apoiador/patrocinador: ${target?.name || id}`,
+      }).catch(() => {});
+      return true;
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `sponsors/${id}`);
+      setSponsors((prev) => prev.filter((s) => s.id !== id));
+      return true;
+    }
+  };
+
   return (
     <CommunityContext.Provider
       value={{
@@ -1574,6 +1700,10 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         auditLogs,
         addAuditLog,
         refreshAuditLogs,
+        sponsors,
+        addSponsor,
+        updateSponsor,
+        deleteSponsor,
       }}
     >
       {children}

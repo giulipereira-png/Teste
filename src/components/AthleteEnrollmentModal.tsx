@@ -41,7 +41,8 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
 
   if (!isOpen) return null;
 
-  const targetPhone = '5511998809708'; // WhatsApp Oficial ACEDEP
+  const targetPhone1 = '5511981047553'; // Celular/WhatsApp Oficial 1 ACEDEP
+  const targetPhone2 = '5511988231504'; // Celular/WhatsApp Oficial 2 ACEDEP
 
   const generateWhatsAppMessage = () => {
     return `*ACEDEP - Nova Solicitação de Avaliação*\n\n` +
@@ -54,7 +55,8 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
       (formData.notes ? `*Obs:* ${formData.notes}\n` : '');
   };
 
-  const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
+  const whatsappUrl1 = `https://wa.me/${targetPhone1}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
+  const whatsappUrl2 = `https://wa.me/${targetPhone2}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -147,13 +149,24 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
               {/* Action Buttons */}
               <div className="space-y-2.5 max-w-md mx-auto">
                 <a
-                  href={whatsappUrl}
+                  href={whatsappUrl1}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3.5 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full py-3 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
                 >
-                  <MessageCircle className="w-5 h-5" />
-                  <span>Enviar Confirmação pelo WhatsApp</span>
+                  <MessageCircle className="w-4.5 h-4.5" />
+                  <span>Enviar pelo WhatsApp (11) 98104-7553</span>
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+
+                <a
+                  href={whatsappUrl2}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <MessageCircle className="w-4.5 h-4.5" />
+                  <span>Enviar pelo WhatsApp (11) 98823-1504</span>
                   <ExternalLink className="w-4 h-4" />
                 </a>
 

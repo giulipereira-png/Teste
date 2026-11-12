@@ -17,7 +17,8 @@ import {
   Layers,
   Sparkles,
   ChevronRight,
-  Info
+  Info,
+  HeartHandshake
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { AuditLogItem, AuditActionType, AuditTargetType } from '../types';
@@ -176,6 +177,8 @@ export const AdminAuditLogsTab: React.FC = () => {
         return <MessageSquare className="w-3.5 h-3.5 text-pink-400" />;
       case 'Backup':
         return <Database className="w-3.5 h-3.5 text-amber-400" />;
+      case 'Apoiador':
+        return <HeartHandshake className="w-3.5 h-3.5 text-rose-400" />;
       default:
         return <Layers className="w-3.5 h-3.5 text-slate-400" />;
     }
@@ -328,6 +331,7 @@ export const AdminAuditLogsTab: React.FC = () => {
               <option value="all">Todas as Entidades</option>
               <option value="Atleta">Atletas & Métricas</option>
               <option value="Evento">Calendário & Competições</option>
+              <option value="Apoiador">Apoiadores & Patrocinadores</option>
               <option value="Recado">Mural da Família</option>
               <option value="Backup">Backups do Sistema</option>
               <option value="Presença">Listas de Treino</option>

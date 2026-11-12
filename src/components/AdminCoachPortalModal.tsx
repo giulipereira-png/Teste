@@ -44,7 +44,8 @@ import {
   Award,
   FileDown,
   Activity,
-  Wifi
+  Wifi,
+  HeartHandshake
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { usePhotos, DEFAULT_PHOTOS, GalleryPhotoItem } from '../context/PhotosContext';
@@ -57,6 +58,7 @@ import { SyncDiagnosticCard } from './SyncDiagnosticCard';
 import { SyncDiagnosticModal } from './SyncDiagnosticModal';
 import { AdminAuditLogsTab } from './AdminAuditLogsTab';
 import { AdminBackupTab } from './AdminBackupTab';
+import { AdminSponsorsTab } from './admin/AdminSponsorsTab';
 import { 
   groupAndRankMetrics, 
   STROKE_OPTIONS, 
@@ -110,6 +112,7 @@ export const AdminCoachPortalModal: React.FC = () => {
     deleteAnnualEvent,
     attendanceSessions,
     auditLogs,
+    sponsors,
   } = useCommunity();
 
   const {
@@ -134,7 +137,7 @@ export const AdminCoachPortalModal: React.FC = () => {
   const isSuperAdmin = currentAdminProfile?.email === 'giuli.pereira@gmail.com' || currentAdminProfile?.role === 'Super Admin';
   const isProfessor = currentAdminProfile?.role === 'Professor' || currentAdminProfile?.role === 'Treinador' || currentAdminProfile?.role === 'Técnico de Natação' || (currentAdminProfile && !isSuperAdmin);
 
-  const [activeTab, setActiveTab] = useState<'atletas' | 'presenca' | 'tempos' | 'agenda' | 'recados' | 'mural_familia' | 'emails' | 'administradores' | 'fotos' | 'galeria' | 'noticias' | 'seguranca' | 'diagnostico' | 'auditoria' | 'backup'>('atletas');
+  const [activeTab, setActiveTab] = useState<'atletas' | 'presenca' | 'tempos' | 'agenda' | 'recados' | 'mural_familia' | 'emails' | 'administradores' | 'fotos' | 'galeria' | 'noticias' | 'seguranca' | 'diagnostico' | 'auditoria' | 'backup' | 'apoiadores'>('atletas');
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   // Export report modal state
@@ -175,10 +178,57 @@ export const AdminCoachPortalModal: React.FC = () => {
   const [newsContent, setNewsContent] = useState('');
   const [newsCategory, setNewsCategory] = useState<NewsCategory>('Resultados & Provas');
   const [newsCoverUrl, setNewsCoverUrl] = useState('');
+  const [showGalleryPickerForNews, setShowGalleryPickerForNews] = useState(false);
+  const [selectedGalleryPhotoTitle, setSelectedGalleryPhotoTitle] = useState<string | null>(null);
+  const newsFileInputRef = useRef<HTMLInputElement>(null);
   const [newsAuthor, setNewsAuthor] = useState('Comissão Técnica ACEDEP');
   const [newsNotifyEmail, setNewsNotifyEmail] = useState(true);
   const [isSavingNews, setIsSavingNews] = useState(false);
   const [newsSuccess, setNewsSuccess] = useState('');
+
+  const handleNewsPhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (PNG, JPG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDimension = 1000;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL('image/jpeg', 0.85);
+          setNewsCoverUrl(compressed);
+          setSelectedGalleryPhotoTitle(file.name);
+          setShowGalleryPickerForNews(false);
+        }
+      };
+      img.src = event.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // Form Athlete State (Enhanced for easy creation)
   const [athleteName, setAthleteName] = useState('');
@@ -677,6 +727,8 @@ export const AdminCoachPortalModal: React.FC = () => {
       setNewsSummary('');
       setNewsContent('');
       setNewsCoverUrl('');
+      setSelectedGalleryPhotoTitle(null);
+      setShowGalleryPickerForNews(false);
       setTimeout(() => setNewsSuccess(''), 5000);
     }
   };
@@ -1047,11 +1099,11 @@ export const AdminCoachPortalModal: React.FC = () => {
 
     if (broadcastRecipientMode === 'specific') {
       const target = athletes.find((a) => a.id === (broadcastSpecificAthleteId || athletes[0]?.id));
-      const toEmail = target?.guardianEmail || 'contato@acedep.org.br';
+      const toEmail = target?.guardianEmail || 'acedep@hotmail.com';
       mailUrl = `mailto:${toEmail}?subject=${encodedSubject}&body=${encodedBody}`;
     } else {
       const parentEmails = getAllParentEmails().join(',');
-      mailUrl = `mailto:contato@acedep.org.br?bcc=${parentEmails}&subject=${encodedSubject}&body=${encodedBody}`;
+      mailUrl = `mailto:acedep@hotmail.com?bcc=${parentEmails}&subject=${encodedSubject}&body=${encodedBody}`;
     }
 
     window.open(mailUrl, '_blank');
@@ -1513,6 +1565,18 @@ export const AdminCoachPortalModal: React.FC = () => {
                     >
                       <Newspaper className="w-3.5 h-3.5" />
                       <span>Notícias ({newsPosts.length})</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('apoiadores')}
+                      className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
+                        activeTab === 'apoiadores'
+                          ? 'bg-[#d4af37] text-[#060e1c] shadow'
+                          : 'text-slate-300 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <HeartHandshake className="w-3.5 h-3.5" />
+                      <span>Apoiadores ({sponsors?.length || 0})</span>
                     </button>
 
                     <button
@@ -2337,7 +2401,7 @@ export const AdminCoachPortalModal: React.FC = () => {
                         const target = athletes.find((a) => a.id === broadcastSpecificAthleteId);
                         const phone = (target?.guardianPhone || '').replace(/\D/g, '');
                         const msg = `*ACEDEP Natação Paralímpica - Comunicado Oficial*\n\n*Assunto:* ${broadcastSubject || 'Informativo'}\n\n${broadcastBody || 'Acesse o portal da ACEDEP para conferir as atualizações.'}\n\n_Atenciosamente, Comissão Técnica ACEDEP_`;
-                        const targetPhone = phone.length >= 10 ? (phone.startsWith('55') ? phone : `55${phone}`) : '5511998809708';
+                        const targetPhone = phone.length >= 10 ? (phone.startsWith('55') ? phone : `55${phone}`) : '5511981047553';
                         window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
                       }}
                       className="px-4 py-2.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 font-semibold text-xs transition-all cursor-pointer border border-emerald-500/30 flex items-center gap-1.5"
@@ -2435,15 +2499,183 @@ export const AdminCoachPortalModal: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">URL da Imagem de Capa</label>
+                {/* Photo Selection for News: ACEDEP Gallery or Device Gallery */}
+                <div className="space-y-2.5 p-4 rounded-xl bg-black/40 border border-[#1e3a5f]">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-[#d4af37]" />
+                      <span>Foto de Capa da Notícia</span>
+                      <span className="text-[10px] text-slate-400 font-normal">(Direto da Galeria ou Upload)</span>
+                    </label>
+
+                    {newsCoverUrl && (
+                      <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>Foto selecionada</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Hidden file input for device photo upload */}
                   <input
-                    type="url"
-                    value={newsCoverUrl}
-                    onChange={(e) => setNewsCoverUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                    ref={newsFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleNewsPhotoUpload}
+                    className="hidden"
                   />
+
+                  {/* Action Buttons to Choose from Gallery or Upload */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowGalleryPickerForNews(!showGalleryPickerForNews)}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-sm ${
+                        showGalleryPickerForNews
+                          ? 'bg-[#d4af37] text-[#060e1c] border-[#d4af37]'
+                          : 'bg-white/10 hover:bg-white/15 text-white border-white/20 hover:border-[#d4af37]'
+                      }`}
+                    >
+                      <Images className="w-4 h-4 text-[#d4af37]" />
+                      <span>Escolher da Galeria da ACEDEP ({galleryPhotos.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => newsFileInputRef.current?.click()}
+                      className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white border border-white/20 hover:border-[#d4af37] text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm"
+                    >
+                      <Upload className="w-4 h-4 text-[#d4af37]" />
+                      <span>Anexar Foto do Celular / PC</span>
+                    </button>
+
+                    {newsCoverUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewsCoverUrl('');
+                          setSelectedGalleryPhotoTitle(null);
+                        }}
+                        className="px-2.5 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold cursor-pointer flex items-center gap-1"
+                        title="Remover foto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Remover</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Expandable Gallery Grid Picker */}
+                  {showGalleryPickerForNews && (
+                    <div className="p-3.5 rounded-xl bg-[#081528] border border-[#d4af37]/40 space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Images className="w-3.5 h-3.5 text-[#d4af37]" />
+                          <span>Clique na foto da galeria que deseja usar como capa:</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowGalleryPickerForNews(false)}
+                          className="text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded bg-white/5"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+
+                      {galleryPhotos.length === 0 ? (
+                        <p className="text-xs text-slate-400 py-3 text-center">
+                          Nenhuma foto cadastrada na galeria no momento. Use o botão "Anexar Foto do Celular / PC".
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5 max-h-56 overflow-y-auto p-1 scrollbar-thin">
+                          {galleryPhotos.map((photo) => {
+                            const isSelected = newsCoverUrl === photo.url;
+                            return (
+                              <div
+                                key={photo.id}
+                                onClick={() => {
+                                  setNewsCoverUrl(photo.url);
+                                  setSelectedGalleryPhotoTitle(photo.title);
+                                  setShowGalleryPickerForNews(false);
+                                }}
+                                className={`group relative rounded-xl overflow-hidden aspect-video bg-black/60 border cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'border-[#d4af37] ring-2 ring-[#d4af37] shadow-lg'
+                                    : 'border-white/10 hover:border-[#d4af37]/60 hover:scale-[1.03]'
+                                }`}
+                              >
+                                <img
+                                  src={photo.url}
+                                  alt={photo.title}
+                                  className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-1.5">
+                                  <span className="text-[10px] text-white font-medium truncate block">
+                                    {photo.title}
+                                  </span>
+                                  <span className="text-[8px] text-[#f3e5ab] truncate">
+                                    {photo.category}
+                                  </span>
+                                </div>
+                                {isSelected && (
+                                  <div className="absolute top-1.5 right-1.5 p-1 rounded-full bg-[#d4af37] text-[#060e1c] shadow">
+                                    <Check className="w-3 h-3 stroke-3" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Selected Photo Live Preview */}
+                  {newsCoverUrl ? (
+                    <div className="p-3 rounded-xl bg-black/60 border border-white/15 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-16 h-12 rounded-lg bg-black overflow-hidden shrink-0 border border-white/20">
+                          <img
+                            src={newsCoverUrl}
+                            alt="Pré-visualização"
+                            className="w-full h-full object-cover"
+                            referrerPolicy="no-referrer"
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white truncate">
+                            {selectedGalleryPhotoTitle || 'Foto selecionada'}
+                          </p>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            {newsCoverUrl.startsWith('data:image') ? 'Foto do dispositivo (otimizada)' : newsCoverUrl}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowGalleryPickerForNews(true)}
+                        className="text-xs text-[#d4af37] hover:underline font-semibold shrink-0 cursor-pointer"
+                      >
+                        Trocar Foto
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-slate-400">
+                      <span>Ou cole um link direto de imagem: </span>
+                      <input
+                        type="url"
+                        value={newsCoverUrl}
+                        onChange={(e) => {
+                          setNewsCoverUrl(e.target.value);
+                          setSelectedGalleryPhotoTitle(null);
+                        }}
+                        placeholder="https://images.unsplash.com/..."
+                        className="mt-1 w-full px-3 py-1.5 text-xs rounded-lg bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -4656,6 +4888,9 @@ export const AdminCoachPortalModal: React.FC = () => {
 
           {/* TAB: BACKUP FIRESTORE */}
           {activeTab === 'backup' && <AdminBackupTab />}
+
+          {/* TAB: APOIADORES & PATROCINADORES */}
+          {activeTab === 'apoiadores' && <AdminSponsorsTab />}
 
         </div>
         </>

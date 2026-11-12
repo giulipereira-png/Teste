@@ -31,8 +31,9 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
-  const targetEmail = 'giuli.pereira@gmail.com';
-  const targetPhone = '5511998809708';
+  const targetEmail = 'acedep@hotmail.com';
+  const targetPhone1 = '5511981047553';
+  const targetPhone2 = '5511988231504';
 
   const generateEmailBody = () => {
     return `Olá ACEDEP,\n\nMensagem enviada pelo site oficial:\n\n` +
@@ -56,7 +57,8 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
     `[ACEDEP] ${formData.subject} - ${formData.name}`
   )}&body=${encodeURIComponent(generateEmailBody())}`;
 
-  const whatsappUrl = `https://wa.me/${targetPhone}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
+  const whatsappUrl1 = `https://wa.me/${targetPhone1}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
+  const whatsappUrl2 = `https://wa.me/${targetPhone2}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,20 +112,31 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                   Mensagem Preparada com Sucesso!
                 </h4>
                 <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed mt-1">
-                  Sua mensagem foi direcionada para <strong>{targetEmail}</strong> e <strong>(11) 99880-9708</strong>. Para garantir envio imediato, use os botões rápidos abaixo:
+                  Sua mensagem foi direcionada para <strong>{targetEmail}</strong> e nossos celulares oficiais <strong>(11) 98104-7553</strong> e <strong>(11) 98823-1504</strong>. Para envio imediato pelo WhatsApp, escolha um dos números abaixo:
                 </p>
               </div>
 
               {/* Action Buttons */}
               <div className="space-y-2.5 max-w-md mx-auto">
                 <a
-                  href={whatsappUrl}
+                  href={whatsappUrl1}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+                  className="w-full py-2.5 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  <span>Enviar pelo WhatsApp (11 99880-9708)</span>
+                  <span>Enviar via WhatsApp (11) 98104-7553</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+                <a
+                  href={whatsappUrl2}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 rounded-lg bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Enviar via WhatsApp (11) 98823-1504</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
 
@@ -171,20 +184,20 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
           ) : (
             <>
               {/* Quick Info */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div className="p-3 rounded-lg bg-[#0f2744] border border-white/5 space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-[#d4af37]">
                     <Mail className="w-3.5 h-3.5" />
-                    <span>E-mail</span>
+                    <span>E-mail Oficial</span>
                   </div>
                   <p className="text-[11px] text-slate-300 truncate">{targetEmail}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-[#0f2744] border border-white/5 space-y-1">
                   <div className="flex items-center gap-1.5 font-bold text-[#d4af37]">
                     <Phone className="w-3.5 h-3.5" />
-                    <span>WhatsApp / Telefone</span>
+                    <span>Celular & WhatsApp</span>
                   </div>
-                  <p className="text-[11px] text-slate-300">(11) 99880-9708</p>
+                  <p className="text-[11px] text-slate-300">(11) 98104-7553 • (11) 98823-1504</p>
                 </div>
               </div>
 

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 interface ExploreHubSectionProps {
-  onNavigateToPage: (page: 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade') => void;
+  onNavigateToPage: (page: 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'apoiadores') => void;
   onOpenSupportModal: () => void;
 }
 
@@ -51,6 +51,26 @@ export const ExploreHubSection: React.FC<ExploreHubSectionProps> = ({
       color: 'from-cyan-600/20 to-cyan-900/40 border-cyan-500/30 text-cyan-300 hover:border-cyan-400',
       iconBg: 'bg-cyan-500/20 text-cyan-300',
       action: () => onNavigateToPage('galeria'),
+    },
+    {
+      id: 'comunidade',
+      title: 'Mural & Notícias',
+      badge: 'Torcida & Comunicados',
+      description: 'Mural de mensagens das famílias, notícias das etapas e conquistas dos nadadores.',
+      icon: MessageSquare,
+      color: 'from-pink-600/20 to-pink-900/40 border-pink-500/30 text-pink-300 hover:border-pink-400',
+      iconBg: 'bg-pink-500/20 text-pink-300',
+      action: () => onNavigateToPage('comunidade'),
+    },
+    {
+      id: 'apoiadores',
+      title: 'Apoiadores & Parceiros',
+      badge: 'Marcas & Gratidão',
+      description: 'Empresas, entidades e parceiros institucionais que apoiam a natação paralímpica paulista.',
+      icon: HeartHandshake,
+      color: 'from-emerald-600/20 to-emerald-900/40 border-emerald-500/30 text-emerald-300 hover:border-emerald-400',
+      iconBg: 'bg-emerald-500/20 text-emerald-300',
+      action: () => onNavigateToPage('apoiadores'),
     },
     {
       id: 'faq',

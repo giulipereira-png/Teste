@@ -18,7 +18,7 @@ interface FooterProps {
   onOpenSupportModal: () => void;
   onOpenContactModal: () => void;
   onOpenMemberPortal?: () => void;
-  onNavigateToPage?: (page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade', hash?: string) => void;
+  onNavigateToPage?: (page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'apoiadores', hash?: string) => void;
   onOpenCalendarModal?: () => void;
   onOpenTeamModal?: () => void;
   onOpenGalleryModal?: () => void;
@@ -43,7 +43,7 @@ export const Footer: React.FC<FooterProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleLinkClick = (page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade', hash?: string) => {
+  const handleLinkClick = (page: 'home' | 'sobre' | 'equipe' | 'calendario' | 'galeria' | 'faq' | 'comunidade' | 'apoiadores', hash?: string) => {
     if (onNavigateToPage) {
       onNavigateToPage(page, hash);
       if (page === 'home' && hash) {
@@ -164,6 +164,15 @@ export const Footer: React.FC<FooterProps> = ({
               </li>
               <li>
                 <button 
+                  onClick={() => handleLinkClick('apoiadores')}
+                  className="text-slate-300 hover:text-[#d4af37] transition-colors block py-0.5 cursor-pointer text-left flex items-center gap-1"
+                >
+                  <span>Apoiadores & Parceiros</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37]"></span>
+                </button>
+              </li>
+              <li>
+                <button 
                   onClick={() => handleLinkClick('faq')}
                   className="text-[#d4af37] hover:underline font-semibold transition-colors block py-0.5 cursor-pointer text-left"
                 >
@@ -232,24 +241,36 @@ export const Footer: React.FC<FooterProps> = ({
                 <div>
                   <span className="block text-slate-400 text-[11px]">E-mail Oficial:</span>
                   <a 
-                    href="mailto:giuli.pereira@gmail.com" 
+                    href="mailto:acedep@hotmail.com" 
                     className="text-white hover:text-[#d4af37] transition-colors font-medium"
                   >
-                    giuli.pereira@gmail.com
+                    acedep@hotmail.com
                   </a>
                 </div>
               </li>
 
               <li className="flex items-start gap-2.5">
                 <Phone className="w-4 h-4 text-[#d4af37] shrink-0 mt-0.5" />
-                <div>
-                  <span className="block text-slate-400 text-[11px]">Telefone / WhatsApp:</span>
-                  <a 
-                    href="tel:11998809708"
-                    className="text-white hover:text-[#d4af37] transition-colors font-medium text-left"
-                  >
-                    (11) 99880-9708
-                  </a>
+                <div className="space-y-1">
+                  <span className="block text-slate-400 text-[11px]">Celular / WhatsApp:</span>
+                  <div className="flex flex-col gap-0.5">
+                    <a 
+                      href="https://wa.me/5511981047553" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-[#d4af37] transition-colors font-medium text-left"
+                    >
+                      (11) 98104-7553
+                    </a>
+                    <a 
+                      href="https://wa.me/5511988231504" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-white hover:text-[#d4af37] transition-colors font-medium text-left"
+                    >
+                      (11) 98823-1504
+                    </a>
+                  </div>
                 </div>
               </li>
 
