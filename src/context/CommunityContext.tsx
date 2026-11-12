@@ -29,7 +29,6 @@ import {
 } from '../types';
 import { calculateAthleteAttendanceStats, parseAppDate, sortDatesDescending } from '../utils/dateAndAttendanceHelper';
 import { recordAuditLog, fetchAuditLogsFromFirestore, RecordAuditParams } from '../services/auditService';
-import { sendDirectGmail, buildAcedepEmailHtml, OFFICIAL_GMAIL, OFFICIAL_HOTMAIL } from '../services/googleEmailService';
 import { 
   INITIAL_NEWS_POSTS, 
   INITIAL_COMMUNITY_CHEERS, 
@@ -1123,40 +1122,6 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         minute: '2-digit',
       }),
     };
-
-    // Attempt real Gmail API dispatch if Google account is connected
-    try {
-      const emailHtml = buildAcedepEmailHtml({
-        badge: (logData.type || 'comunicado').toUpperCase().replace('_', ' '),
-        title: logData.title,
-        headline: logData.title,
-        paragraphs: [
-          logData.contentPreview,
-          'Esta é uma notificação oficial da Associação Cultural, Educacional e Paradesportiva (ACEDEP) gerada automaticamente através do portal esportivo.',
-        ],
-        fields: [
-          { label: 'Destinatário(s)', value: logData.recipientSummary || 'Pais e Responsáveis' },
-          { label: 'Remetente', value: logData.senderName || 'Coordenação ACEDEP' },
-          { label: 'Cópia Oficial', value: `${OFFICIAL_HOTMAIL} | ${OFFICIAL_GMAIL}` },
-        ],
-      });
-
-      const targets = (logData.recipientEmails || []).filter(Boolean);
-      const toAddresses = targets.length > 0 ? targets : [OFFICIAL_HOTMAIL];
-
-      const sendRes = await sendDirectGmail({
-        to: toAddresses,
-        subject: `[ACEDEP] ${logData.title}`,
-        htmlBody: emailHtml,
-        cc: [OFFICIAL_HOTMAIL, OFFICIAL_GMAIL],
-      });
-
-      if (sendRes.success) {
-        newLog.status = 'enviado';
-      }
-    } catch (sendErr) {
-      console.warn('Disparo Gmail API em background não conectado ou falhou, mantendo log no Firestore:', sendErr);
-    }
 
     try {
       await setDoc(doc(db, 'email_notifications', newId), newLog);
