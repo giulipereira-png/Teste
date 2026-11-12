@@ -121,7 +121,7 @@ export const CommunitySection: React.FC = () => {
         date: new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
         author: 'Comissão Técnica ACEDEP',
         authorRole: 'Comissão Técnica ACEDEP',
-        tags: ['Natação Paralímpica', 'S14', 'ACEDEP'],
+        tags: [],
       },
       newNewsNotifyEmail
     );

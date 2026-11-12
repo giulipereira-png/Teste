@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, User, Heart, Share2, Award, ArrowLeft, Tag } from 'lucide-react';
+import { X, Calendar, User, Heart, Share2, Award, ArrowLeft } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 
 export const CommunityNewsModal: React.FC = () => {
@@ -108,21 +108,6 @@ export const CommunityNewsModal: React.FC = () => {
           <div className="prose prose-invert max-w-none text-slate-200 text-sm sm:text-base leading-relaxed space-y-4 whitespace-pre-line font-normal">
             {selectedNewsForModal.content}
           </div>
-
-          {/* Tags */}
-          {selectedNewsForModal.tags && selectedNewsForModal.tags.length > 0 && (
-            <div className="pt-4 border-t border-[#1e3a5f]/60 flex flex-wrap items-center gap-2">
-              <Tag className="w-3.5 h-3.5 text-[#d4af37]" />
-              {selectedNewsForModal.tags.map((tag, idx) => (
-                <span
-                  key={idx}
-                  className="px-2.5 py-0.5 rounded-lg bg-black/30 border border-white/10 text-slate-300 text-xs"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>

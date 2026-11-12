@@ -12,8 +12,8 @@ import {
   Check,
   ExternalLink,
   Phone
-} from 'lucide-react';
 import { Logo } from './Logo';
+import { sendDirectGmail, buildAcedepEmailHtml } from '../services/googleEmailService';
 
 interface SupportModalProps {
   isOpen: boolean;
@@ -36,19 +36,21 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
-  const targetEmail = 'acedep@hotmail.com';
+  const targetEmail = 'giuli.pereira@gmail.com';
+  const copyEmail = 'acedep@hotmail.com';
   const targetPhone1 = '5511981047553';
   const targetPhone2 = '5511988231504';
 
   const generateEmailBody = () => {
-    return `Olá Equipe ACEDEP,\n\nProposta de Apoio / Patrocínio enviada pelo site:\n\n` +
+    return `Olá Equipe ACEDEP (Giuliano Pereira e Diretoria),\n\nProposta de Apoio / Patrocínio enviada pelo site:\n\n` +
       `• Tipo: ${supportType === 'empresa' ? 'Pessoa Jurídica (Empresa)' : 'Pessoa Física (Doador Individual)'}\n` +
       `• Nome: ${formData.name}\n` +
       (formData.company ? `• Empresa / Razão Social: ${formData.company}\n` : '') +
       `• E-mail: ${formData.email}\n` +
       `• Telefone/WhatsApp: ${formData.phone}\n` +
       `• Modalidade de Apoio: ${formData.contributionType}\n` +
-      `• Mensagem: ${formData.message || 'Sem observações adicionais'}\n`;
+      `• Mensagem: ${formData.message || 'Sem observações adicionais'}\n\n` +
+      `Enviado para: ${targetEmail} | Com cópia oficial: ${copyEmail}`;
   };
 
   const generateWhatsAppMessage = () => {
@@ -62,7 +64,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
       (formData.message ? `*Mensagem:* ${formData.message}` : '');
   };
 
-  const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(
+  const mailtoUrl = `mailto:${targetEmail}?cc=${copyEmail}&subject=${encodeURIComponent(
     `[ACEDEP - Apoio] ${formData.contributionType} - ${formData.name}`
   )}&body=${encodeURIComponent(generateEmailBody())}`;
 
@@ -71,6 +73,30 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    // Tenta envio direto se a sessão do Gmail estiver conectada
+    sendDirectGmail({
+      to: [targetEmail, copyEmail],
+      subject: `[ACEDEP - Apoio] ${formData.contributionType} - ${formData.name}`,
+      htmlBody: buildAcedepEmailHtml({
+        badge: 'PROPOSTA DE APOIO',
+        title: 'Nova Proposta de Apoio Recebida pelo Site',
+        headline: `${formData.name} enviou uma proposta de parceria`,
+        paragraphs: [
+          'Uma nova proposta de apoio/patrocínio foi enviada diretamente pelo formulário oficial do site da ACEDEP.',
+          formData.message || 'Sem mensagem adicional.',
+        ],
+        fields: [
+          { label: 'Tipo', value: supportType === 'empresa' ? 'Pessoa Jurídica (Empresa)' : 'Pessoa Física' },
+          { label: 'Nome', value: formData.name },
+          ...(formData.company ? [{ label: 'Empresa', value: formData.company }] : []),
+          { label: 'E-mail do Interessado', value: formData.email },
+          { label: 'Telefone/WhatsApp', value: formData.phone },
+          { label: 'Modalidade', value: formData.contributionType },
+        ],
+      }),
+      cc: [copyEmail, targetEmail],
+    }).catch(() => {});
+
     window.open(mailtoUrl, '_blank');
     setSubmitted(true);
   };
@@ -120,7 +146,7 @@ export const SupportModal: React.FC<SupportModalProps> = ({ isOpen, onClose }) =
                   Proposta Preparada com Sucesso!
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed mt-1">
-                  Agradecemos imensamente! Sua proposta foi direcionada para <strong>{targetEmail}</strong> e nossos celulares oficiais <strong>(11) 98104-7553</strong> e <strong>(11) 98823-1504</strong>. Clique abaixo para enviar agora:
+                  Agradecemos imensamente! Sua proposta foi direcionada para a coordenação em <strong>{targetEmail}</strong> com cópia para <strong>{copyEmail}</strong> e nossos celulares oficiais <strong>(11) 98104-7553</strong> e <strong>(11) 98823-1504</strong>. Clique abaixo para enviar ou confirmar agora:
                 </p>
               </div>
 

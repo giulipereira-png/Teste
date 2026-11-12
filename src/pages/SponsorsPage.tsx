@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { 
   ArrowLeft, 
   HeartHandshake, 
@@ -8,14 +8,12 @@ import {
   ExternalLink, 
   Mail, 
   Phone, 
-  Sparkles, 
   ShieldCheck, 
   CheckCircle2, 
   Heart,
   ArrowRight
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
-import { SponsorItem } from '../types';
 
 interface SponsorsPageProps {
   onBackToHome: () => void;
@@ -24,14 +22,6 @@ interface SponsorsPageProps {
   onOpenAdminPortal?: () => void;
 }
 
-const CATEGORY_ORDER: SponsorItem['category'][] = [
-  'Patrocinador Master',
-  'Apoiador Institucional',
-  'Parceiro Técnico',
-  'Apoio Alimentar & Saúde',
-  'Empresa Amiga do Paradesporto'
-];
-
 export const SponsorsPage: React.FC<SponsorsPageProps> = ({
   onBackToHome,
   onOpenSupportModal,
@@ -39,17 +29,12 @@ export const SponsorsPage: React.FC<SponsorsPageProps> = ({
   onOpenAdminPortal
 }) => {
   const { sponsors } = useCommunity();
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState<string>('all');
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const activeSponsors = sponsors.filter((s) => s.isActive);
-
-  const filteredSponsors = activeCategoryFilter === 'all'
-    ? activeSponsors
-    : activeSponsors.filter((s) => s.category === activeCategoryFilter);
 
   return (
     <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] pt-24 pb-20">
@@ -121,87 +106,65 @@ export const SponsorsPage: React.FC<SponsorsPageProps> = ({
       {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         
-        {/* Category Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          <button
-            type="button"
-            onClick={() => setActiveCategoryFilter('all')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              activeCategoryFilter === 'all'
-                ? 'bg-[#d4af37] text-[#060e1c] font-bold shadow-md shadow-[#d4af37]/20'
-                : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
-            }`}
-          >
-            Todos os Apoiadores ({activeSponsors.length})
-          </button>
-
-          {CATEGORY_ORDER.map((cat) => {
-            const count = activeSponsors.filter((s) => s.category === cat).length;
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setActiveCategoryFilter(cat)}
-                className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  activeCategoryFilter === cat
-                    ? 'bg-[#d4af37] text-[#060e1c] font-bold shadow-md shadow-[#d4af37]/20'
-                    : 'bg-white/5 text-slate-300 hover:bg-white/10 border border-white/10'
-                }`}
-              >
-                {cat} ({count})
-              </button>
-            );
-          })}
+        {/* Section Header */}
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-white/10 pb-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold font-serif text-white flex items-center gap-2.5">
+              <span>Empresas e Parceiros que Fazem Acontecer</span>
+              <span className="text-xs font-sans font-semibold text-[#d4af37] bg-[#d4af37]/15 px-2.5 py-0.5 rounded-full border border-[#d4af37]/30">
+                {activeSponsors.length}
+              </span>
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              Gratidão a cada parceiro pelo investimento contínuo na formação e vitórias dos nossos paratletas.
+            </p>
+          </div>
         </div>
 
-        {/* Sponsors Display Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredSponsors.map((item) => (
+        {/* Sponsors Display Cards - Compact & Elegant Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
+          {activeSponsors.map((item) => (
             <div
               key={item.id}
-              className="p-6 rounded-3xl bg-gradient-to-b from-[#0a1a33] to-[#071324] border border-[#d4af37]/20 hover:border-[#d4af37]/60 transition-all shadow-xl hover:shadow-2xl flex flex-col justify-between group"
+              className="p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-[#0a1a33] to-[#071324] border border-[#d4af37]/20 hover:border-[#d4af37]/60 transition-all shadow-md hover:shadow-xl flex flex-col justify-between group"
             >
-              <div className="space-y-4">
-                {/* Category badge */}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="px-3 py-1 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3e5ab] text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
-                    {item.category}
-                  </span>
-
-                  {item.sinceYear && (
-                    <span className="text-[11px] text-slate-400 font-medium">
-                      Desde {item.sinceYear}
-                    </span>
-                  )}
-                </div>
-
-                {/* Logo Box */}
-                <div className="w-full h-32 rounded-2xl bg-white/95 flex items-center justify-center p-4 shadow-inner border border-white/40 overflow-hidden group-hover:scale-[1.02] transition-transform">
+              <div className="space-y-3">
+                {/* Compact Logo Container */}
+                <div className="w-full h-20 rounded-xl bg-white/95 flex items-center justify-center px-4 py-2 shadow-inner border border-white/30 overflow-hidden group-hover:scale-[1.02] transition-transform">
                   {item.logoUrl ? (
                     <img
                       src={item.logoUrl}
                       alt={`Logotipo da ${item.name}`}
-                      className="max-h-full max-w-full object-contain"
+                      className="max-h-12 max-w-[140px] object-contain"
                     />
                   ) : (
-                    <div className="text-center">
-                      <span className="text-xs font-black text-slate-800 uppercase tracking-widest block">
+                    <div className="text-center px-2">
+                      <span className="text-xs font-extrabold text-slate-800 uppercase tracking-wider block truncate">
                         {item.name}
                       </span>
-                      <span className="text-[10px] text-slate-500">
-                        Espaço para Logotipo da Empresa
+                      <span className="text-[10px] text-slate-500 block">
+                        Parceiro Oficial
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Title & Description */}
+                {/* Info */}
                 <div>
-                  <h3 className="text-base sm:text-lg font-bold text-white font-serif">
-                    {item.name}
-                  </h3>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <h3 className="text-sm sm:text-base font-bold text-white font-serif leading-snug truncate">
+                      {item.name}
+                    </h3>
+                  </div>
+
+                  {item.sinceYear && (
+                    <p className="text-[11px] text-[#d4af37] font-medium mt-0.5">
+                      Parceiro desde {item.sinceYear}
+                    </p>
+                  )}
+
                   {item.description && (
-                    <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                    <p className="text-xs text-slate-300 mt-1.5 leading-relaxed line-clamp-3">
                       {item.description}
                     </p>
                   )}
@@ -209,63 +172,61 @@ export const SponsorsPage: React.FC<SponsorsPageProps> = ({
               </div>
 
               {/* Card Footer / Action Link */}
-              <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between">
+              <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between text-xs">
                 {item.websiteUrl ? (
                   <a
                     href={item.websiteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs text-[#d4af37] hover:text-[#f3e5ab] font-bold transition-colors"
+                    className="inline-flex items-center gap-1 text-[11px] text-[#d4af37] hover:text-[#f3e5ab] font-bold transition-colors"
                   >
-                    <Globe className="w-3.5 h-3.5" />
-                    <span>Visitar Site Oficial</span>
-                    <ExternalLink className="w-3 h-3" />
+                    <Globe className="w-3 h-3" />
+                    <span>Visitar Site</span>
+                    <ExternalLink className="w-2.5 h-2.5" />
                   </a>
                 ) : (
                   <span className="text-[11px] text-slate-400">
-                    Parceiro da ACEDEP
+                    Apoiador ACEDEP
                   </span>
                 )}
 
-                <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400 flex items-center gap-1">
+                <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3" />
-                  Apoiador Verificado
+                  Verificado
                 </span>
               </div>
             </div>
           ))}
 
-          {/* Reserved / Invitation Card for New Sponsors */}
-          <div className="p-6 rounded-3xl bg-gradient-to-br from-[#0d2244]/60 to-[#071324]/80 border-2 border-dashed border-[#d4af37]/40 flex flex-col justify-between space-y-4 hover:border-[#d4af37] transition-all">
-            <div className="space-y-3">
-              <span className="px-3 py-1 rounded-full bg-white/10 text-slate-300 text-[10px] font-bold uppercase tracking-wider inline-block">
-                Espaço Aberto
-              </span>
-
-              <div className="w-full h-32 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center justify-center p-4 text-center">
-                <Building2 className="w-8 h-8 text-[#d4af37] mb-1 stroke-1" />
-                <span className="text-xs font-bold text-white">
-                  O Logotipo da Sua Marca Aqui
+          {/* Reserved / Invitation Card for New Sponsors (Compact) */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#0d2244]/40 to-[#071324]/60 border-2 border-dashed border-[#d4af37]/35 flex flex-col justify-between space-y-3 hover:border-[#d4af37] transition-all">
+            <div className="space-y-2.5">
+              <div className="w-full h-20 rounded-xl bg-black/40 border border-white/10 flex flex-col items-center justify-center p-2 text-center">
+                <Building2 className="w-6 h-6 text-[#d4af37] mb-0.5 stroke-1" />
+                <span className="text-xs font-bold text-white leading-tight">
+                  Sua Marca Aqui
                 </span>
-                <span className="text-[10px] text-slate-400 mt-0.5">
-                  Visibilidade em eventos, site e redes sociais
+                <span className="text-[10px] text-slate-400">
+                  Espaço para Novo Parceiro
                 </span>
               </div>
 
-              <h3 className="text-base font-bold text-white font-serif">
-                Associe sua Empresa ao Paradesporto
-              </h3>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Contribua para o transporte, alimentação e preparação técnica de nadadores paralímpicos. Oferecemos contrapartidas institucionais e presença de marca.
-              </p>
+              <div>
+                <h3 className="text-sm font-bold text-white font-serif">
+                  Apoie Nossos Atletas
+                </h3>
+                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  Conecte sua empresa ao paradesporto paulista com visibilidade em eventos e site.
+                </p>
+              </div>
             </div>
 
             <button
               type="button"
               onClick={onOpenSupportModal}
-              className="w-full py-2.5 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all shadow cursor-pointer flex items-center justify-center gap-1.5"
+              className="w-full py-2 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all shadow cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <span>Quero ser Apoiador</span>
+              <span>Quero Apoiar</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>

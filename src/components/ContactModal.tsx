@@ -12,6 +12,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { Logo } from './Logo';
+import { sendDirectGmail, buildAcedepEmailHtml } from '../services/googleEmailService';
 
 interface ContactModalProps {
   isOpen: boolean;
@@ -31,17 +32,19 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
-  const targetEmail = 'acedep@hotmail.com';
+  const targetEmail = 'giuli.pereira@gmail.com';
+  const copyEmail = 'acedep@hotmail.com';
   const targetPhone1 = '5511981047553';
   const targetPhone2 = '5511988231504';
 
   const generateEmailBody = () => {
-    return `Olá ACEDEP,\n\nMensagem enviada pelo site oficial:\n\n` +
+    return `Olá Equipe ACEDEP (Giuliano Pereira e Diretoria),\n\nMensagem enviada pelo site oficial:\n\n` +
       `• Nome: ${formData.name}\n` +
       `• E-mail: ${formData.email}\n` +
       `• Telefone/WhatsApp: ${formData.phone}\n` +
       `• Assunto: ${formData.subject}\n\n` +
-      `Mensagem:\n${formData.message}\n`;
+      `Mensagem:\n${formData.message}\n\n` +
+      `Enviado para: ${targetEmail} | Com cópia oficial: ${copyEmail}`;
   };
 
   const generateWhatsAppMessage = () => {
@@ -53,7 +56,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
       `*Mensagem:*\n${formData.message}`;
   };
 
-  const mailtoUrl = `mailto:${targetEmail}?subject=${encodeURIComponent(
+  const mailtoUrl = `mailto:${targetEmail}?cc=${copyEmail}&subject=${encodeURIComponent(
     `[ACEDEP] ${formData.subject} - ${formData.name}`
   )}&body=${encodeURIComponent(generateEmailBody())}`;
 
@@ -62,7 +65,28 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Tenta abrir o cliente de email diretamente
+    // Tenta envio direto se a sessão do Gmail estiver conectada
+    sendDirectGmail({
+      to: [targetEmail, copyEmail],
+      subject: `[ACEDEP] ${formData.subject} - ${formData.name}`,
+      htmlBody: buildAcedepEmailHtml({
+        badge: 'CONTATO DO SITE',
+        title: 'Nova Mensagem de Contato pelo Site',
+        headline: `${formData.name} enviou uma mensagem institucional`,
+        paragraphs: [
+          `Uma nova mensagem foi preenchida diretamente no formulário de contato do portal da ACEDEP.`,
+          formData.message,
+        ],
+        fields: [
+          { label: 'Nome', value: formData.name },
+          { label: 'E-mail de Contato', value: formData.email },
+          { label: 'Telefone/WhatsApp', value: formData.phone },
+          { label: 'Assunto', value: formData.subject },
+        ],
+      }),
+      cc: [copyEmail, targetEmail],
+    }).catch(() => {});
+
     window.open(mailtoUrl, '_blank');
     setSubmitted(true);
   };
@@ -112,7 +136,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
                   Mensagem Preparada com Sucesso!
                 </h4>
                 <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed mt-1">
-                  Sua mensagem foi direcionada para <strong>{targetEmail}</strong> e nossos celulares oficiais <strong>(11) 98104-7553</strong> e <strong>(11) 98823-1504</strong>. Para envio imediato pelo WhatsApp, escolha um dos números abaixo:
+                  Sua mensagem foi direcionada para a coordenação em <strong>{targetEmail}</strong> com cópia oficial para <strong>{copyEmail}</strong> e nossos celulares oficiais <strong>(11) 98104-7553</strong> e <strong>(11) 98823-1504</strong>.
                 </p>
               </div>
 

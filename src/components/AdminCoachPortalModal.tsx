@@ -60,6 +60,15 @@ import { AdminAuditLogsTab } from './AdminAuditLogsTab';
 import { AdminBackupTab } from './AdminBackupTab';
 import { AdminSponsorsTab } from './admin/AdminSponsorsTab';
 import { 
+  connectGoogleAccount, 
+  disconnectGoogleAccount, 
+  getGoogleAuthStatus, 
+  sendDirectGmail, 
+  OFFICIAL_GMAIL, 
+  OFFICIAL_HOTMAIL, 
+  buildAcedepEmailHtml 
+} from '../services/googleEmailService';
+import { 
   groupAndRankMetrics, 
   STROKE_OPTIONS, 
   EVENT_PRESETS, 
@@ -310,6 +319,70 @@ export const AdminCoachPortalModal: React.FC = () => {
   const [broadcastSuccess, setBroadcastSuccess] = useState('');
   const [confirmDeleteAthleteId, setConfirmDeleteAthleteId] = useState<string | null>(null);
   const [isDeletingAthleteId, setIsDeletingAthleteId] = useState<string | null>(null);
+
+  // Google Workspace / Gmail Integration States
+  const [googleAuthStatus, setGoogleAuthStatus] = useState(getGoogleAuthStatus());
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
+
+  const handleConnectGoogle = async () => {
+    setIsConnectingGoogle(true);
+    setTestEmailResult(null);
+    try {
+      const res = await connectGoogleAccount();
+      if (res.success) {
+        setGoogleAuthStatus(getGoogleAuthStatus());
+        setBroadcastSuccess(`Conta Google (${res.user?.email || OFFICIAL_GMAIL}) conectada com sucesso para envio direto!`);
+      } else {
+        setTestEmailResult(res.error || 'Falha ao conectar conta Google.');
+      }
+    } finally {
+      setIsConnectingGoogle(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    await disconnectGoogleAccount();
+    setGoogleAuthStatus(getGoogleAuthStatus());
+    setTestEmailResult(null);
+  };
+
+  const handleSendTestEmail = async () => {
+    setTestEmailSending(true);
+    setTestEmailResult(null);
+    try {
+      const res = await sendDirectGmail({
+        to: [OFFICIAL_GMAIL, OFFICIAL_HOTMAIL],
+        subject: '[ACEDEP] Teste de Conexão Oficial Google & Hotmail',
+        htmlBody: buildAcedepEmailHtml({
+          badge: 'TESTE DE CONECTIVIDADE',
+          title: 'Teste de Envio de E-mail ACEDEP',
+          headline: 'Conexão com Google Workspace (Gmail) Ativa com Sucesso!',
+          paragraphs: [
+            'Este é um e-mail de teste disparado diretamente do site da ACEDEP através da conta Google giuli.pereira@gmail.com.',
+            'Se você recebeu esta mensagem, os envios automáticos para pais, atletas, inscrições e apoiadores estão funcionando perfeitamente em tempo real!',
+          ],
+          fields: [
+            { label: 'Remetente Oficial', value: OFFICIAL_GMAIL },
+            { label: 'Cópia Institucional', value: OFFICIAL_HOTMAIL },
+            { label: 'Data e Hora', value: new Date().toLocaleString('pt-BR') },
+          ],
+        }),
+        cc: [OFFICIAL_HOTMAIL, OFFICIAL_GMAIL],
+      });
+
+      if (res.success) {
+        setTestEmailResult(`E-mail de teste enviado com sucesso pelo Gmail! ID: ${res.messageId}`);
+      } else {
+        setTestEmailResult(`Atenção: ${res.error}`);
+      }
+    } catch (err: any) {
+      setTestEmailResult(`Erro ao enviar teste: ${err?.message || 'Falha desconhecida'}`);
+    } finally {
+      setTestEmailSending(false);
+    }
+  };
 
   // Photo & Gallery Manager States
   const [selectedPhotoId, setSelectedPhotoId] = useState<string>('about_team');
@@ -715,7 +788,7 @@ export const AdminCoachPortalModal: React.FC = () => {
         date: new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }),
         author: newsAuthor.trim(),
         authorRole: 'Comissão Técnica ACEDEP',
-        tags: ['Natação Paralímpica', 'S14', 'ACEDEP'],
+        tags: [],
       },
       newsNotifyEmail
     );
@@ -1040,12 +1113,10 @@ export const AdminCoachPortalModal: React.FC = () => {
     await deleteAnnualEvent(id);
   };
 
-  // Handle Manual Email Broadcast Dispatch
+  // Handle Manual Email Broadcast Dispatch with Google Workspace Gmail API
   const handleSendBroadcast = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastSubject.trim() || !broadcastBody.trim()) return;
-
-    setIsSendingBroadcast(true);
 
     let recipients: string[] = [];
     let summary = '';
@@ -1059,26 +1130,64 @@ export const AdminCoachPortalModal: React.FC = () => {
         recipients = [target.guardianEmail];
         summary = `${target.guardianName} (${target.guardianEmail}) - Atleta: ${target.name}`;
       } else {
-        recipients = ['pais@acedep.org.br'];
+        recipients = [OFFICIAL_HOTMAIL];
         summary = 'Responsável selecionado';
       }
     }
 
-    await sendEmailNotification({
-      type: broadcastType,
-      title: broadcastSubject.trim(),
-      recipientSummary: summary,
-      recipientEmails: recipients,
-      senderName: broadcastSender.trim(),
-      contentPreview: broadcastBody.trim().substring(0, 180),
-      status: 'enviado',
-    });
+    // Explicit confirmation dialog per Google Workspace Integration guidelines
+    const confirmed = window.confirm(
+      `Confirmar o envio oficial deste comunicado para ${recipients.length} destinatário(s) através de ${OFFICIAL_GMAIL} com cópia para ${OFFICIAL_HOTMAIL}?\n\nAssunto: ${broadcastSubject.trim()}`
+    );
+    if (!confirmed) return;
 
-    setIsSendingBroadcast(false);
-    setBroadcastSuccess(`Informativo gravado e disparado com sucesso para ${summary}!`);
-    setBroadcastSubject('');
-    setBroadcastBody('');
-    setTimeout(() => setBroadcastSuccess(''), 6000);
+    setIsSendingBroadcast(true);
+
+    try {
+      // Direct Gmail send
+      const res = await sendDirectGmail({
+        to: recipients.length > 0 ? recipients : [OFFICIAL_HOTMAIL],
+        subject: `[ACEDEP] ${broadcastSubject.trim()}`,
+        htmlBody: buildAcedepEmailHtml({
+          badge: 'COMUNICADO OFICIAL',
+          title: broadcastSubject.trim(),
+          headline: broadcastSubject.trim(),
+          paragraphs: [
+            broadcastBody.trim(),
+            'Mensagem oficial enviada pela comissão técnica e diretoria da Associação Cultural, Educacional e Paradesportiva (ACEDEP).',
+          ],
+          fields: [
+            { label: 'Destinatários', value: summary },
+            { label: 'Remetente', value: broadcastSender.trim() },
+            { label: 'Contas Oficiais', value: `${OFFICIAL_HOTMAIL} | ${OFFICIAL_GMAIL}` },
+          ],
+        }),
+        cc: [OFFICIAL_HOTMAIL, OFFICIAL_GMAIL],
+      });
+
+      await sendEmailNotification({
+        type: broadcastType,
+        title: broadcastSubject.trim(),
+        recipientSummary: summary,
+        recipientEmails: recipients,
+        senderName: broadcastSender.trim(),
+        contentPreview: broadcastBody.trim().substring(0, 180),
+        status: res.success ? 'enviado' : 'pendente',
+      });
+
+      if (res.success) {
+        setBroadcastSuccess(`E-mail disparado com sucesso via Gmail (${OFFICIAL_GMAIL}) para ${summary}! Cópia arquivada em ${OFFICIAL_HOTMAIL}.`);
+      } else {
+        setBroadcastSuccess(`Informativo gravado no portal para ${summary}. Nota: ${res.error || 'Conecte sua conta Google no painel para envio imediato direto da conta'}.`);
+      }
+      setBroadcastSubject('');
+      setBroadcastBody('');
+      setTimeout(() => setBroadcastSuccess(''), 7000);
+    } catch (err: any) {
+      setBroadcastSuccess(`Erro no envio: ${err?.message || 'Falha ao processar'}`);
+    } finally {
+      setIsSendingBroadcast(false);
+    }
   };
 
   // Open Gmail Web directly in browser with recipients and subject filled

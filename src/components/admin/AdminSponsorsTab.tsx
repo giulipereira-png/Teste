@@ -17,8 +17,7 @@ import {
   EyeOff,
   Sparkles,
   ArrowUpDown,
-  Search,
-  Filter
+  Search
 } from 'lucide-react';
 import { useCommunity } from '../../context/CommunityContext';
 import { SponsorItem } from '../../types';
@@ -38,7 +37,6 @@ interface AdminSponsorsTabProps {
 export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateToPublicSponsors }) => {
   const { sponsors, addSponsor, updateSponsor, deleteSponsor } = useCommunity();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSponsorId, setEditingSponsorId] = useState<string | null>(null);
 
@@ -197,10 +195,8 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
 
   // Filtered sponsors
   const filteredSponsors = sponsors.filter((s) => {
-    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    return s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (s.description || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategoryFilter === 'all' || s.category === selectedCategoryFilter;
-    return matchesSearch && matchesCategory;
   });
 
   return (
@@ -517,7 +513,7 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
         </form>
       )}
 
-      {/* Filter and Search Bar */}
+      {/* Search Bar */}
       <div className="p-4 rounded-2xl bg-[#091528] border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -530,20 +526,8 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <select
-            value={selectedCategoryFilter}
-            onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-white text-xs focus:outline-none focus:border-[#d4af37]"
-          >
-            <option value="all">Todas as Categorias ({sponsors.length})</option>
-            {CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat} ({sponsors.filter((s) => s.category === cat).length})
-              </option>
-            ))}
-          </select>
+        <div className="text-xs text-slate-400 shrink-0 font-medium">
+          Total: <span className="text-white font-bold">{sponsors.length}</span> apoiadores ({sponsors.filter((s) => s.isActive).length} ativos)
         </div>
       </div>
 
@@ -552,7 +536,7 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
         {filteredSponsors.map((item) => (
           <div
             key={item.id}
-            className={`p-5 rounded-2xl border transition-all relative flex flex-col justify-between ${
+            className={`p-4 rounded-2xl border transition-all relative flex flex-col justify-between ${
               item.isActive
                 ? 'bg-gradient-to-b from-[#0a1b33] to-[#071324] border-white/10 hover:border-[#d4af37]/50 shadow-md'
                 : 'bg-black/40 border-white/5 opacity-60'
@@ -560,9 +544,9 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
           >
             <div className="space-y-3">
               {/* Header with status badge & actions */}
-              <div className="flex items-start justify-between gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/30 text-[#f3e5ab] text-[10px] font-bold uppercase tracking-wider">
-                  {item.category}
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-[#d4af37] font-semibold">
+                  {item.sinceYear ? `Desde ${item.sinceYear}` : 'Parceiro'}
                 </span>
 
                 <div className="flex items-center gap-1">
@@ -599,21 +583,21 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
                 </div>
               </div>
 
-              {/* Logo / Thumbnail container */}
-              <div className="w-full h-24 rounded-xl bg-white/95 flex items-center justify-center p-3 overflow-hidden shadow-inner border border-white/30">
+              {/* Compact Logo / Thumbnail container */}
+              <div className="w-full h-16 rounded-xl bg-white/95 flex items-center justify-center p-2 overflow-hidden shadow-inner border border-white/30">
                 {item.logoUrl ? (
                   <img
                     src={item.logoUrl}
                     alt={item.name}
-                    className="max-h-full max-w-full object-contain"
+                    className="max-h-11 max-w-[140px] object-contain"
                   />
                 ) : (
                   <div className="text-center">
-                    <span className="text-xs font-black text-slate-800 uppercase tracking-widest block">
+                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider block truncate max-w-[180px]">
                       {item.name}
                     </span>
                     <span className="text-[10px] text-slate-500">
-                      Espaço Reservado para Logotipo
+                      Espaço para Logotipo
                     </span>
                   </div>
                 )}
@@ -624,13 +608,8 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
                 <h4 className="text-sm font-bold text-white leading-snug">
                   {item.name}
                 </h4>
-                {item.sinceYear && (
-                  <span className="text-[11px] text-[#d4af37] font-medium block mt-0.5">
-                    Parceiro desde {item.sinceYear}
-                  </span>
-                )}
                 {item.description && (
-                  <p className="text-xs text-slate-300 mt-2 line-clamp-2 leading-relaxed">
+                  <p className="text-xs text-slate-300 mt-1 line-clamp-2 leading-relaxed">
                     {item.description}
                   </p>
                 )}
@@ -638,7 +617,7 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
             </div>
 
             {/* Footer with website link and upload shortcut */}
-            <div className="pt-3 mt-3 border-t border-white/10 flex items-center justify-between text-xs">
+            <div className="pt-2.5 mt-2.5 border-t border-white/10 flex items-center justify-between text-xs">
               {item.websiteUrl ? (
                 <a
                   href={item.websiteUrl}
@@ -671,8 +650,8 @@ export const AdminSponsorsTab: React.FC<AdminSponsorsTabProps> = ({ onNavigateTo
           <HeartHandshake className="w-10 h-10 text-slate-500 mx-auto" />
           <h4 className="text-sm font-bold text-white">Nenhum apoiador encontrado</h4>
           <p className="text-xs text-slate-400 max-w-md mx-auto">
-            {searchTerm || selectedCategoryFilter !== 'all'
-              ? 'Tente ajustar os filtros de busca para encontrar o apoiador desejado.'
+            {searchTerm
+              ? 'Tente ajustar os termos de busca para encontrar o apoiador desejado.'
               : 'Clique no botão "+ Novo Apoiador / Anexar Logo" acima para cadastrar a primeira empresa ou parceiro oficial da ACEDEP.'}
           </p>
           <button

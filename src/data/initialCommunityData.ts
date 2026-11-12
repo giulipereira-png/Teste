@@ -227,7 +227,7 @@ A comissão técnica parabeniza todos os nadadores, as famílias pelo apoio inco
     authorRole: 'Coordenação de Natação Paralímpica',
     pinned: true,
     likesCount: 38,
-    tags: ['Natação Paralímpica', 'Classe S14', 'Circuito Nacional', 'Medalhas'],
+    tags: [],
     createdAt: '2026-02-24T10:00:00Z',
   },
   {
@@ -246,7 +246,7 @@ Os documentos podem ser entregues diretamente à coordenação na borda da pisci
     authorRole: 'Administração & Saúde',
     pinned: false,
     likesCount: 22,
-    tags: ['Documentação', 'Saúde', 'Centro Paralímpico'],
+    tags: [],
     createdAt: '2026-02-18T14:30:00Z',
   },
   {
@@ -265,7 +265,7 @@ Todos os atletas receberão medalha de participação. Convidamos todas as famí
     authorRole: 'Treinador Principal',
     pinned: false,
     likesCount: 45,
-    tags: ['Festival', 'Inclusão', 'Família ACEDEP'],
+    tags: [],
     createdAt: '2026-02-10T09:15:00Z',
   },
 ];
