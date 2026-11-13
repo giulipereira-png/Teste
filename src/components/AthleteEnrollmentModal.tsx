@@ -8,11 +8,13 @@ import {
   Copy,
   Check,
   ExternalLink,
-  Loader2
+  Loader2,
+  Mail
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { db, doc, setDoc, OperationType, handleFirestoreError } from '../lib/firebase';
 import { sanitizeText } from '../utils/sanitizer';
+import { sendDirectGmail, buildAcedepEmailHtml, OFFICIAL_GMAIL, OFFICIAL_HOTMAIL } from '../services/googleEmailService';
 
 interface AthleteEnrollmentModalProps {
   isOpen: boolean;
@@ -25,6 +27,7 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
 }) => {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [directEmailSent, setDirectEmailSent] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
@@ -41,8 +44,24 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
 
   if (!isOpen) return null;
 
+  const targetEmail = 'giuli.pereira@gmail.com';
+  const copyEmail = 'acedep@hotmail.com';
   const targetPhone1 = '5511981047553'; // Celular/WhatsApp Oficial 1 ACEDEP
   const targetPhone2 = '5511988231504'; // Celular/WhatsApp Oficial 2 ACEDEP
+
+  const generateEmailBody = () => {
+    return `Olá Equipe ACEDEP (Giuliano Pereira e Diretoria Técnica),\n\n` +
+      `Nova solicitação de teste prático / avaliação aquática recebida pelo site:\n\n` +
+      `• Atleta: ${formData.athleteName} (${formData.age} anos)\n` +
+      `• Responsável: ${formData.guardianName}\n` +
+      `• Telefone/WhatsApp: ${formData.phone}\n` +
+      `• E-mail do Responsável: ${formData.email || 'Não informado'}\n` +
+      `• Condição/Deficiência: ${formData.disabilityType}\n` +
+      `• Modalidade/Turma: ${formData.modalityType}\n` +
+      `• Experiência Aquática: ${formData.swimmingExperience}\n` +
+      `• Observações: ${formData.notes || 'Nenhuma'}\n\n` +
+      `Destinatário: ${targetEmail} | Com cópia oficial: ${copyEmail}`;
+  };
 
   const generateWhatsAppMessage = () => {
     return `*ACEDEP - Nova Solicitação de Avaliação*\n\n` +
@@ -54,6 +73,16 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
       `*Experiência:* ${formData.swimmingExperience}\n` +
       (formData.notes ? `*Obs:* ${formData.notes}\n` : '');
   };
+
+  const subjectLine = `[ACEDEP - Inscrição Teste] ${formData.athleteName} - Avaliação Aquática`;
+  const mailtoUrl = `mailto:${targetEmail}?cc=${copyEmail}&subject=${encodeURIComponent(
+    subjectLine
+  )}&body=${encodeURIComponent(generateEmailBody())}`;
+  const gmailWebUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+    targetEmail
+  )}&cc=${encodeURIComponent(copyEmail)}&su=${encodeURIComponent(
+    subjectLine
+  )}&body=${encodeURIComponent(generateEmailBody())}`;
 
   const whatsappUrl1 = `https://wa.me/${targetPhone1}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
   const whatsappUrl2 = `https://wa.me/${targetPhone2}?text=${encodeURIComponent(generateWhatsAppMessage())}`;
@@ -80,6 +109,42 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
         status: 'Pendente',
         createdAt: new Date().toISOString(),
       });
+
+      // Dispara envio automático direto se a conta Google/Gmail estiver conectada
+      const notificationEmails = [OFFICIAL_GMAIL, OFFICIAL_HOTMAIL];
+      if (formData.email && formData.email.includes('@')) {
+        notificationEmails.push(formData.email.trim());
+      }
+
+      try {
+        const res = await sendDirectGmail({
+          to: notificationEmails,
+          subject: `[ACEDEP - Inscrição Teste] ${formData.athleteName} (${formData.disabilityType})`,
+          htmlBody: buildAcedepEmailHtml({
+            badge: 'AVALIAÇÃO AQUÁTICA & SELETIVA',
+            title: 'Nova Inscrição para Teste de Natação',
+            headline: `Candidato: ${formData.athleteName} (${formData.age} anos)`,
+            paragraphs: [
+              'Uma nova solicitação de avaliação técnica e teste prático na piscina foi cadastrada pelo site da ACEDEP.',
+              formData.notes ? `Observações da família: "${formData.notes}"` : 'Sem observações adicionais.',
+            ],
+            fields: [
+              { label: 'Atleta', value: `${formData.athleteName} (${formData.age} anos)` },
+              { label: 'Responsável', value: formData.guardianName },
+              { label: 'Telefone/WhatsApp', value: formData.phone },
+              { label: 'E-mail', value: formData.email || 'Não informado' },
+              { label: 'Condição / Classe', value: formData.disabilityType },
+              { label: 'Turma / Objetivo', value: formData.modalityType },
+              { label: 'Nível Atual', value: formData.swimmingExperience },
+            ],
+          }),
+          cc: [OFFICIAL_HOTMAIL, OFFICIAL_GMAIL],
+          replyTo: formData.email || undefined,
+        });
+        setDirectEmailSent(res.success);
+      } catch {
+        setDirectEmailSent(false);
+      }
 
       setSubmitted(true);
     } catch (err: any) {
@@ -133,13 +198,15 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
               </div>
               <div>
                 <h4 className="text-2xl font-bold text-white">
-                  Cadastro Salvo com Sucesso!
+                  {directEmailSent ? 'Inscrição Salva e E-mail Enviado!' : 'Cadastro Salvo com Sucesso!'}
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-300 max-w-md mx-auto leading-relaxed mt-1">
-                  Os dados do atleta foram salvos no sistema da ACEDEP na nuvem e já estão disponíveis no painel administrativo de qualquer aparelho. 
+                  {directEmailSent
+                    ? `Os dados do atleta foram gravados na nuvem e a inscrição foi enviada por e-mail para ${targetEmail} com cópia para ${copyEmail}.`
+                    : 'Os dados do atleta foram salvos no sistema da ACEDEP na nuvem e já estão disponíveis no painel administrativo de qualquer aparelho.'}
                 </p>
                 <p className="text-xs text-[#f3e5ab] mt-2 font-medium">
-                  Para atendimento imediato, clique abaixo para enviar a solicitação diretamente no WhatsApp da diretoria:
+                  Para atendimento imediato, clique abaixo para confirmar no WhatsApp ou enviar uma cópia por e-mail:
                 </p>
                 {errorMessage && (
                   <p className="text-xs text-amber-400 mt-2">{errorMessage}</p>
@@ -168,6 +235,27 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
                   <MessageCircle className="w-4.5 h-4.5" />
                   <span>Enviar pelo WhatsApp (11) 98823-1504</span>
                   <ExternalLink className="w-4 h-4" />
+                </a>
+
+                <a
+                  href={gmailWebUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 rounded-lg bg-red-600/20 hover:bg-red-600/30 text-red-200 font-semibold text-xs border border-red-500/40 transition-all flex items-center justify-center gap-2"
+                >
+                  <Mail className="w-4 h-4 text-red-300" />
+                  <span>Enviar pelo Gmail Web ({targetEmail})</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+
+                <a
+                  href={mailtoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-4 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold text-xs border border-white/20 transition-all flex items-center justify-center gap-2"
+                >
+                  <Mail className="w-4 h-4 text-[#d4af37]" />
+                  <span>Abrir no App de E-mail / Hotmail ({copyEmail})</span>
                 </a>
 
                 <button
@@ -271,6 +359,19 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
                     className="w-full px-3 py-2 bg-[#060e1c] border border-slate-700 rounded-md text-sm text-white focus:outline-none focus:border-[#d4af37]"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  E-mail do Responsável (Opcional - para cópia da inscrição)
+                </label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  placeholder="responsavel@exemplo.com"
+                  className="w-full px-3 py-2 bg-[#060e1c] border border-slate-700 rounded-md text-sm text-white focus:outline-none focus:border-[#d4af37]"
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

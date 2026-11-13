@@ -18,21 +18,23 @@ import {
 import { getAuth } from 'firebase/auth';
 import config from '../../firebase-applet-config.json';
 
+const typedConfig = config as typeof config & { firestoreDatabaseId?: string };
+
 const firebaseConfig = {
-  apiKey: config.apiKey,
-  authDomain: config.authDomain,
-  projectId: config.projectId,
-  storageBucket: config.storageBucket,
-  messagingSenderId: config.messagingSenderId,
-  appId: config.appId,
+  apiKey: typedConfig.apiKey,
+  authDomain: typedConfig.authDomain,
+  projectId: typedConfig.projectId,
+  storageBucket: typedConfig.storageBucket,
+  messagingSenderId: typedConfig.messagingSenderId,
+  appId: typedConfig.appId,
 };
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 // Initialize Firestore with robust long-polling support and undefined properties handling
-const databaseId = config.firestoreDatabaseId && config.firestoreDatabaseId !== '(default)' 
-  ? config.firestoreDatabaseId 
-  : undefined;
+const databaseId = typedConfig.firestoreDatabaseId && typedConfig.firestoreDatabaseId !== '(default)' 
+  ? typedConfig.firestoreDatabaseId 
+  : 'ai-studio-acedepassociaocu-fe62783f-4d2c-46d8-afc3-af28924ec5f2';
 
 let firestoreDb;
 try {

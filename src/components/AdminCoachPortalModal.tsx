@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, 
   Plus, 
@@ -59,6 +59,16 @@ import { SyncDiagnosticModal } from './SyncDiagnosticModal';
 import { AdminAuditLogsTab } from './AdminAuditLogsTab';
 import { AdminBackupTab } from './AdminBackupTab';
 import { AdminSponsorsTab } from './admin/AdminSponsorsTab';
+import { 
+  connectGoogleAccount, 
+  disconnectGoogleAccount, 
+  getGoogleAuthStatus, 
+  subscribeGoogleAuthStatus,
+  sendDirectGmail, 
+  OFFICIAL_GMAIL, 
+  OFFICIAL_HOTMAIL, 
+  buildAcedepEmailHtml 
+} from '../services/googleEmailService';
 import { 
   groupAndRankMetrics, 
   STROKE_OPTIONS, 
@@ -310,6 +320,79 @@ export const AdminCoachPortalModal: React.FC = () => {
   const [broadcastSuccess, setBroadcastSuccess] = useState('');
   const [confirmDeleteAthleteId, setConfirmDeleteAthleteId] = useState<string | null>(null);
   const [isDeletingAthleteId, setIsDeletingAthleteId] = useState<string | null>(null);
+
+  // Google Workspace / Gmail Integration States
+  const [googleAuthStatus, setGoogleAuthStatus] = useState(getGoogleAuthStatus());
+  const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
+  const [pendingTestEmailConfirm, setPendingTestEmailConfirm] = useState(false);
+  const [pendingBroadcastConfirm, setPendingBroadcastConfirm] = useState(false);
+
+  useEffect(() => {
+    return subscribeGoogleAuthStatus(setGoogleAuthStatus);
+  }, []);
+
+  const handleConnectGoogle = async () => {
+    setIsConnectingGoogle(true);
+    setTestEmailResult(null);
+    try {
+      const res = await connectGoogleAccount();
+      if (res.success) {
+        setGoogleAuthStatus(getGoogleAuthStatus());
+        setBroadcastSuccess(`Conta Google (${res.user?.email || OFFICIAL_GMAIL}) conectada com sucesso para envio direto!`);
+      } else {
+        setTestEmailResult(res.error || 'Falha ao conectar conta Google.');
+      }
+    } finally {
+      setIsConnectingGoogle(false);
+    }
+  };
+
+  const handleDisconnectGoogle = async () => {
+    await disconnectGoogleAccount();
+    setGoogleAuthStatus(getGoogleAuthStatus());
+    setPendingTestEmailConfirm(false);
+    setTestEmailResult(null);
+  };
+
+  const handleSendTestEmail = async () => {
+    setPendingTestEmailConfirm(false);
+    setTestEmailSending(true);
+    setTestEmailResult(null);
+    try {
+      const res = await sendDirectGmail({
+        to: [OFFICIAL_GMAIL, OFFICIAL_HOTMAIL],
+        subject: '[ACEDEP] Teste de Conexão Oficial Google & Hotmail',
+        htmlBody: buildAcedepEmailHtml({
+          badge: 'TESTE DE CONECTIVIDADE',
+          title: 'Teste de Envio de E-mail ACEDEP',
+          headline: 'Conexão com Google Workspace (Gmail) Ativa com Sucesso!',
+          paragraphs: [
+            'Este é um e-mail de teste disparado diretamente do site da ACEDEP através da conta Google giuli.pereira@gmail.com.',
+            'Se você recebeu esta mensagem, os envios automáticos para pais, atletas, inscrições e apoiadores estão funcionando perfeitamente em tempo real!',
+          ],
+          fields: [
+            { label: 'Remetente Oficial', value: OFFICIAL_GMAIL },
+            { label: 'Cópia Institucional', value: OFFICIAL_HOTMAIL },
+            { label: 'Data e Hora', value: new Date().toLocaleString('pt-BR') },
+          ],
+        }),
+        cc: [OFFICIAL_HOTMAIL, OFFICIAL_GMAIL],
+        skipLog: false,
+      });
+
+      if (res.success) {
+        setTestEmailResult(`E-mail de teste enviado com sucesso pelo Gmail (${googleAuthStatus.email || OFFICIAL_GMAIL})! Cópia enviada para ${OFFICIAL_HOTMAIL}.`);
+      } else {
+        setTestEmailResult(`Atenção: ${res.error}`);
+      }
+    } catch (err: any) {
+      setTestEmailResult(`Erro ao enviar teste: ${err?.message || 'Falha desconhecida'}`);
+    } finally {
+      setTestEmailSending(false);
+    }
+  };
 
   // Photo & Gallery Manager States
   const [selectedPhotoId, setSelectedPhotoId] = useState<string>('about_team');
@@ -986,6 +1069,18 @@ export const AdminCoachPortalModal: React.FC = () => {
         targetCategory: eventTarget.trim(),
         status: eventStatus,
       });
+
+      if (success && eventNotifyEmail) {
+        await sendEmailNotification({
+          type: 'boletim_geral',
+          title: `Agenda 2026: Evento Atualizado - ${eventTitle.trim()}`,
+          recipientSummary: `Todos os Pais e Responsáveis (${getAllParentEmails().length} e-mails)`,
+          recipientEmails: getAllParentEmails(),
+          senderName: 'Coordenação Técnica ACEDEP',
+          contentPreview: `Atualização de Calendário: ${eventTitle.trim()} | Nova Data: ${eventDate.trim()} | Local: ${eventLocation.trim()} | Status: ${eventStatus}`,
+          status: 'enviado',
+        });
+      }
     } else {
       success = await addAnnualEvent({
         title: eventTitle.trim(),
@@ -1040,12 +1135,16 @@ export const AdminCoachPortalModal: React.FC = () => {
     await deleteAnnualEvent(id);
   };
 
-  // Handle Manual Email Broadcast Dispatch
-  const handleSendBroadcast = async (e: React.FormEvent) => {
+  // Handle Manual Email Broadcast Dispatch with Google Workspace Gmail API
+  const handleSendBroadcast = (e: React.FormEvent) => {
     e.preventDefault();
     if (!broadcastSubject.trim() || !broadcastBody.trim()) return;
+    setPendingBroadcastConfirm(true);
+  };
 
-    setIsSendingBroadcast(true);
+  const executeConfirmedBroadcast = async () => {
+    setPendingBroadcastConfirm(false);
+    if (!broadcastSubject.trim() || !broadcastBody.trim()) return;
 
     let recipients: string[] = [];
     let summary = '';
@@ -1059,54 +1158,86 @@ export const AdminCoachPortalModal: React.FC = () => {
         recipients = [target.guardianEmail];
         summary = `${target.guardianName} (${target.guardianEmail}) - Atleta: ${target.name}`;
       } else {
-        recipients = ['pais@acedep.org.br'];
+        recipients = [OFFICIAL_HOTMAIL];
         summary = 'Responsável selecionado';
       }
     }
 
-    await sendEmailNotification({
-      type: broadcastType,
-      title: broadcastSubject.trim(),
-      recipientSummary: summary,
-      recipientEmails: recipients,
-      senderName: broadcastSender.trim(),
-      contentPreview: broadcastBody.trim().substring(0, 180),
-      status: 'enviado',
-    });
+    setIsSendingBroadcast(true);
 
-    setIsSendingBroadcast(false);
-    setBroadcastSuccess(`Informativo gravado e disparado com sucesso para ${summary}!`);
-    setBroadcastSubject('');
-    setBroadcastBody('');
-    setTimeout(() => setBroadcastSuccess(''), 6000);
+    try {
+      // Direct Gmail send (skip duplicate internal log because sendEmailNotification logs below)
+      const res = await sendDirectGmail({
+        to: recipients.length > 0 ? recipients : [OFFICIAL_HOTMAIL],
+        subject: `[ACEDEP] ${broadcastSubject.trim()}`,
+        htmlBody: buildAcedepEmailHtml({
+          badge: 'COMUNICADO OFICIAL',
+          title: broadcastSubject.trim(),
+          headline: broadcastSubject.trim(),
+          paragraphs: [
+            broadcastBody.trim(),
+            'Mensagem oficial enviada pela comissão técnica e diretoria da Associação Cultural, Educacional e Paradesportiva (ACEDEP).',
+          ],
+          fields: [
+            { label: 'Destinatários', value: summary },
+            { label: 'Remetente', value: broadcastSender.trim() },
+            { label: 'Contas Oficiais', value: `${OFFICIAL_HOTMAIL} | ${OFFICIAL_GMAIL}` },
+          ],
+        }),
+        cc: [OFFICIAL_HOTMAIL, OFFICIAL_GMAIL],
+        skipLog: true,
+      });
+
+      await sendEmailNotification(
+        {
+          type: broadcastType,
+          title: broadcastSubject.trim(),
+          recipientSummary: summary,
+          recipientEmails: recipients,
+          senderName: broadcastSender.trim(),
+          contentPreview: broadcastBody.trim().substring(0, 180),
+          status: res.success ? 'enviado' : 'pendente',
+        },
+        { skipDirectGmail: true }
+      );
+
+      if (res.success) {
+        setBroadcastSuccess(`E-mail disparado com sucesso via Gmail (${googleAuthStatus.email || OFFICIAL_GMAIL}) para ${summary}! Cópia arquivada em ${OFFICIAL_HOTMAIL}.`);
+      } else {
+        setBroadcastSuccess(`Informativo gravado no portal para ${summary}. Nota: ${res.error || 'Conecte sua conta Google acima para envio direto pela conta'}.`);
+      }
+      setBroadcastSubject('');
+      setBroadcastBody('');
+      setTimeout(() => setBroadcastSuccess(''), 7000);
+    } catch (err: any) {
+      setBroadcastSuccess(`Erro no envio: ${err?.message || 'Falha ao processar'}`);
+    } finally {
+      setIsSendingBroadcast(false);
+    }
   };
 
-  // Open Gmail Web directly in browser with recipients and subject filled
-  const handleOpenGmailWeb = (subject?: string, body?: string) => {
+  // Build Gmail Web compose URL directly for browser links
+  const buildGmailWebUrl = (subject?: string, body?: string) => {
     const target = athletes.find((a) => a.id === (broadcastRecipientMode === 'specific' ? (broadcastSpecificAthleteId || athletes[0]?.id) : ''));
-    const toEmail = broadcastRecipientMode === 'specific' ? (target?.guardianEmail || '') : getAllParentEmails().join(',');
+    const toEmail = broadcastRecipientMode === 'specific' ? (target?.guardianEmail || OFFICIAL_GMAIL) : OFFICIAL_GMAIL;
+    const bccEmails = broadcastRecipientMode === 'all' ? getAllParentEmails().join(',') : '';
     const encodedSubject = encodeURIComponent(subject || broadcastSubject || 'Informativo ACEDEP Natação Paralímpica');
     const encodedBody = encodeURIComponent(body || broadcastBody || 'Prezados pais e responsáveis,\n\nSegue atualização importante sobre as atividades e treinos da ACEDEP:\n\nAtenciosamente,\nCoordenação ACEDEP');
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&su=${encodedSubject}&body=${encodedBody}`;
-    window.open(gmailUrl, '_blank');
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}&cc=${encodeURIComponent(OFFICIAL_HOTMAIL)}${bccEmails ? `&bcc=${encodeURIComponent(bccEmails)}` : ''}&su=${encodedSubject}&body=${encodedBody}`;
   };
 
-  // Open default mail client with parent emails
-  const handleOpenMailClient = (subject?: string, body?: string) => {
-    let mailUrl = '';
+  // Build mailto URL for Hotmail / Outlook / Apple Mail
+  const buildMailClientUrl = (subject?: string, body?: string) => {
     const encodedSubject = encodeURIComponent(subject || broadcastSubject || 'Informativo ACEDEP Natação Paralímpica');
     const encodedBody = encodeURIComponent(body || broadcastBody || 'Prezados pais e responsáveis,\n\nSegue atualização importante sobre as atividades e treinos da ACEDEP:\n\nAtenciosamente,\nCoordenação ACEDEP');
 
     if (broadcastRecipientMode === 'specific') {
       const target = athletes.find((a) => a.id === (broadcastSpecificAthleteId || athletes[0]?.id));
-      const toEmail = target?.guardianEmail || 'acedep@hotmail.com';
-      mailUrl = `mailto:${toEmail}?subject=${encodedSubject}&body=${encodedBody}`;
-    } else {
-      const parentEmails = getAllParentEmails().join(',');
-      mailUrl = `mailto:acedep@hotmail.com?bcc=${parentEmails}&subject=${encodedSubject}&body=${encodedBody}`;
+      const toEmail = target?.guardianEmail || OFFICIAL_GMAIL;
+      return `mailto:${toEmail}?cc=${OFFICIAL_HOTMAIL},${OFFICIAL_GMAIL}&subject=${encodedSubject}&body=${encodedBody}`;
     }
-
-    window.open(mailUrl, '_blank');
+    const parentEmails = getAllParentEmails().join(',');
+    return `mailto:${OFFICIAL_GMAIL}?cc=${OFFICIAL_HOTMAIL}&bcc=${parentEmails}&subject=${encodedSubject}&body=${encodedBody}`;
   };
 
   // Filtered athletes list
@@ -2233,32 +2364,148 @@ export const AdminCoachPortalModal: React.FC = () => {
           )}
 
           {/* =========================================================================
-              TAB 2: DISPARADOR DE E-MAILS AOS PAIS & HISTÓRICO
+              TAB 2: DISPARADOR DE E-MAILS DIRETOS (GMAIL API + HOTMAIL) & HISTÓRICO
              ========================================================================= */}
           {activeTab === 'emails' && (
             <div className="space-y-6">
-              
+
+              {/* Google Workspace / Gmail Direct Connection Card */}
+              <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#0a192f] via-[#0f2545] to-[#0a192f] border border-[#d4af37]/40 shadow-xl space-y-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-5 h-5 text-[#d4af37]" />
+                      <h4 className="text-sm sm:text-base font-bold text-white">
+                        Conexão Direta de Envio — Gmail ({OFFICIAL_GMAIL}) & Cópia ({OFFICIAL_HOTMAIL})
+                      </h4>
+                    </div>
+                    <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                      Conecte sua conta Google (<strong>{OFFICIAL_GMAIL}</strong>) para disparar e-mails diretamente pelo site — atualizações de calendário, recados aos pais, inscrições de testes e propostas de apoio — sempre enviando cópia automática para <strong>{OFFICIAL_HOTMAIL}</strong>.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                    {!googleAuthStatus.isConnected ? (
+                      <button
+                        type="button"
+                        onClick={handleConnectGoogle}
+                        disabled={isConnectingGoogle}
+                        className="inline-flex items-center gap-3 px-4 py-2.5 rounded-lg bg-white hover:bg-slate-100 text-[#1f1f1f] text-xs font-semibold border border-slate-300 shadow-md transition-all cursor-pointer disabled:opacity-60"
+                      >
+                        <svg className="w-4 h-4 shrink-0" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+                          <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+                          <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+                          <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+                          <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+                        </svg>
+                        <span>{isConnectingGoogle ? 'Conectando...' : 'Sign in with Google'}</span>
+                      </button>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs">
+                          <CheckCircle2 className="w-4 h-4 shrink-0" />
+                          <span className="font-semibold">Conectado: {googleAuthStatus.email}</span>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setPendingTestEmailConfirm(true)}
+                          disabled={testEmailSending}
+                          className="px-3.5 py-2 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>{testEmailSending ? 'Enviando Teste...' : 'Testar Envio Gmail + Hotmail'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleDisconnectGoogle}
+                          className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/15 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold transition-all cursor-pointer"
+                        >
+                          Desconectar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Explicit Confirmation Prompt for Test Email */}
+                {pendingTestEmailConfirm && (
+                  <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <span className="text-amber-200">
+                      Confirmar envio de um e-mail de teste real usando <strong>{googleAuthStatus.email || OFFICIAL_GMAIL}</strong> para <strong>{OFFICIAL_GMAIL}</strong> com cópia em <strong>{OFFICIAL_HOTMAIL}</strong>?
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setPendingTestEmailConfirm(false)}
+                        className="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 font-semibold cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSendTestEmail}
+                        className="px-3.5 py-1.5 rounded-lg bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] font-bold cursor-pointer"
+                      >
+                        Confirmar Envio de Teste
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {testEmailResult && (
+                  <div className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                    testEmailResult.includes('sucesso')
+                      ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+                      : 'bg-amber-500/15 border-amber-500/30 text-amber-200'
+                  }`}>
+                    <span>{testEmailResult}</span>
+                    <button
+                      type="button"
+                      onClick={() => setTestEmailResult(null)}
+                      className="text-slate-400 hover:text-white p-1 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* Broadcast Composer */}
               <form onSubmit={handleSendBroadcast} className="p-6 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] space-y-4 shadow-lg">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Mail className="w-4 h-4 text-[#d4af37]" />
+                      <Send className="w-4 h-4 text-[#d4af37]" />
                       <span>Disparador de Atividades & Comunicados por E-mail</span>
                     </h4>
                     <p className="text-xs text-slate-400 mt-0.5">
-                      Envie instantaneamente informativos para que pais e responsáveis não percam nenhuma atualização da página.
+                      Envie informativos para os <strong className="text-[#f3e5ab]">{getAllParentEmails().length} e-mails de responsáveis</strong> cadastrados (cópia automática para {OFFICIAL_HOTMAIL}).
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMailClient()}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer border border-white/10"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Abrir Gmail / Outlook com CCO</span>
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={buildGmailWebUrl()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-300 text-xs font-semibold flex items-center gap-1.5 border border-red-500/30"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Abrir Gmail Web</span>
+                    </a>
+
+                    <a
+                      href={buildMailClientUrl()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 border border-white/10"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Abrir Hotmail / Outlook</span>
+                    </a>
+                  </div>
                 </div>
 
                 {/* Templates Quick Bar */}
@@ -2273,18 +2520,18 @@ export const AdminCoachPortalModal: React.FC = () => {
                       }}
                       className="px-2.5 py-1 rounded-lg bg-black/40 hover:bg-[#d4af37]/20 hover:text-[#f3e5ab] text-slate-300 text-[11px] border border-white/5 transition-colors cursor-pointer"
                     >
-                      🏊 Horários de Treino
+                      Horários de Treino
                     </button>
 
                     <button
                       type="button"
                       onClick={() => {
                         setBroadcastSubject('Nova Notícia no Mural: Resultados Oficiais e Conquistas S14');
-                        setBroadcastBody('Prezados pais e familiares,\n\nAcabamos de publicar na página inicial da ACEDEP as fotos e resultados da última competição de natação paralímpica. Nossos atletas tiveram uma participação exemplar!\n\nConfiram os detalhes no site: https://acedep.org.br\n\nAbraços,\nEquipe ACEDEP');
+                        setBroadcastBody('Prezados pais e familiares,\n\nAcabamos de publicar na página inicial da ACEDEP as fotos e resultados da última competição de natação paralímpica. Nossos atletas tiveram uma participação exemplar!\n\nAtenciosamente,\nEquipe ACEDEP');
                       }}
                       className="px-2.5 py-1 rounded-lg bg-black/40 hover:bg-[#d4af37]/20 hover:text-[#f3e5ab] text-slate-300 text-[11px] border border-white/5 transition-colors cursor-pointer"
                     >
-                      🏆 Nova Notícia no Mural
+                      Nova Notícia no Mural
                     </button>
 
                     <button
@@ -2295,13 +2542,13 @@ export const AdminCoachPortalModal: React.FC = () => {
                       }}
                       className="px-2.5 py-1 rounded-lg bg-black/40 hover:bg-[#d4af37]/20 hover:text-[#f3e5ab] text-slate-300 text-[11px] border border-white/5 transition-colors cursor-pointer"
                     >
-                      📋 Atestados Médicos
+                      Atestados Médicos
                     </button>
                   </div>
                 </div>
 
-                {/* Recipient Mode */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Recipient Mode & Type */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="text-xs font-semibold text-slate-300 block mb-1">Destinatários do E-mail *</label>
                     <select
@@ -2309,28 +2556,53 @@ export const AdminCoachPortalModal: React.FC = () => {
                       onChange={(e) => setBroadcastRecipientMode(e.target.value as 'all' | 'specific')}
                       className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
                     >
-                      <option value="all">Todos os Pais e Responsáveis Cadastrados ({getAllParentEmails().length} e-mails)</option>
+                      <option value="all">Todos os Pais ({getAllParentEmails().length} e-mails)</option>
                       <option value="specific">Responsável de um atleta específico</option>
                     </select>
                   </div>
 
-                  {broadcastRecipientMode === 'specific' && (
-                    <div>
-                      <label className="text-xs font-semibold text-slate-300 block mb-1">Selecione o Atleta / Responsável *</label>
-                      <select
-                        value={broadcastSpecificAthleteId}
-                        onChange={(e) => setBroadcastSpecificAthleteId(e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
-                      >
-                        {athletes.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.name} (Resp: {a.guardianName} - {a.guardianEmail})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">Categoria do Comunicado</label>
+                    <select
+                      value={broadcastType}
+                      onChange={(e) => setBroadcastType(e.target.value as EmailNotificationLog['type'])}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
+                    >
+                      <option value="boletim_geral">Boletim Geral / Calendário</option>
+                      <option value="noticia">Notícia & Resultados</option>
+                      <option value="recado_treinador">Recado da Comissão Técnica</option>
+                      <option value="credenciais">Credenciais & Acesso</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">Nome do Remetente</label>
+                    <input
+                      type="text"
+                      value={broadcastSender}
+                      onChange={(e) => setBroadcastSender(e.target.value)}
+                      placeholder="Ex: Coordenação Geral ACEDEP"
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
+                    />
+                  </div>
                 </div>
+
+                {broadcastRecipientMode === 'specific' && (
+                  <div>
+                    <label className="text-xs font-semibold text-slate-300 block mb-1">Selecione o Atleta / Responsável *</label>
+                    <select
+                      value={broadcastSpecificAthleteId}
+                      onChange={(e) => setBroadcastSpecificAthleteId(e.target.value)}
+                      className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
+                    >
+                      {athletes.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.name} (Resp: {a.guardianName} - {a.guardianEmail})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-xs font-semibold text-slate-300 block mb-1">Assunto do E-mail *</label>
@@ -2363,16 +2635,39 @@ export const AdminCoachPortalModal: React.FC = () => {
                   </div>
                 )}
 
-                {/* Delivery Explanation Note */}
-                <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-slate-300 text-[11px] space-y-1">
-                  <span className="font-bold text-blue-300 block flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5" />
-                    Entrega Garantida na Caixa de Entrada dos Pais:
-                  </span>
-                  <p>
-                    O botão <strong>Disparar Notificação</strong> registra o comunicado instantaneamente no portal e no histórico do responsável. Para que a mensagem caia diretamente no Gmail ou Outlook pessoal do responsável sem risco de filtro anti-spam, utilize também o botão <strong>Abrir no Gmail / Programa de E-mail</strong>.
-                  </p>
-                </div>
+                {/* Explicit Confirmation Prompt before Gmail API Send */}
+                {pendingBroadcastConfirm && (
+                  <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-3 text-xs">
+                    <p className="text-amber-200 font-medium leading-relaxed">
+                      Confirmar o envio deste comunicado ({broadcastSubject.trim()}) para{' '}
+                      <strong>
+                        {broadcastRecipientMode === 'all'
+                          ? `${getAllParentEmails().length} responsáveis cadastrados`
+                          : 'o responsável selecionado'}
+                      </strong>{' '}
+                      via <strong>{googleAuthStatus.email || OFFICIAL_GMAIL}</strong> com cópia oficial para{' '}
+                      <strong>{OFFICIAL_HOTMAIL}</strong>?
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPendingBroadcastConfirm(false)}
+                        className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 font-semibold cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={executeConfirmedBroadcast}
+                        disabled={isSendingBroadcast}
+                        className="px-5 py-2 rounded-lg bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] font-bold cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        <span>Confirmar & Enviar Agora</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center gap-3">
                   <button
@@ -2381,35 +2676,37 @@ export const AdminCoachPortalModal: React.FC = () => {
                     className="px-6 py-2.5 rounded-xl bg-[#d4af37] text-[#060e1c] font-bold text-xs hover:bg-[#b8952b] transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2 shadow"
                   >
                     <Send className="w-4 h-4" />
-                    <span>{isSendingBroadcast ? 'Disparando...' : 'Gravar & Notificar no Portal'}</span>
+                    <span>{isSendingBroadcast ? 'Enviando...' : 'Enviar E-mail & Notificar no Portal'}</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMailClient(broadcastSubject, broadcastBody)}
-                    className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-all cursor-pointer border border-white/10 flex items-center gap-1.5"
-                    title="Abre o Gmail/Outlook com destinatários e mensagem preenchidos"
+                  <a
+                    href={buildMailClientUrl(broadcastSubject, broadcastBody)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-all border border-white/10 flex items-center gap-1.5"
+                    title="Abre o Outlook/Hotmail com destinatários e cópia preenchidos"
                   >
                     <ExternalLink className="w-3.5 h-3.5" />
-                    <span>Abrir no Gmail / Outlook dos Pais</span>
-                  </button>
+                    <span>Abrir no Outlook / Hotmail</span>
+                  </a>
 
-                  {broadcastRecipientMode === 'specific' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const target = athletes.find((a) => a.id === broadcastSpecificAthleteId);
-                        const phone = (target?.guardianPhone || '').replace(/\D/g, '');
-                        const msg = `*ACEDEP Natação Paralímpica - Comunicado Oficial*\n\n*Assunto:* ${broadcastSubject || 'Informativo'}\n\n${broadcastBody || 'Acesse o portal da ACEDEP para conferir as atualizações.'}\n\n_Atenciosamente, Comissão Técnica ACEDEP_`;
-                        const targetPhone = phone.length >= 10 ? (phone.startsWith('55') ? phone : `55${phone}`) : '5511981047553';
-                        window.open(`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`, '_blank');
-                      }}
-                      className="px-4 py-2.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 font-semibold text-xs transition-all cursor-pointer border border-emerald-500/30 flex items-center gap-1.5"
-                    >
-                      <Smartphone className="w-3.5 h-3.5" />
-                      <span>Enviar via WhatsApp do Responsável</span>
-                    </button>
-                  )}
+                  {broadcastRecipientMode === 'specific' && (() => {
+                    const target = athletes.find((a) => a.id === broadcastSpecificAthleteId);
+                    const phone = (target?.guardianPhone || '').replace(/\D/g, '');
+                    const msg = `*ACEDEP Natação Paralímpica - Comunicado Oficial*\n\n*Assunto:* ${broadcastSubject || 'Informativo'}\n\n${broadcastBody || 'Acesse o portal da ACEDEP para conferir as atualizações.'}\n\n_Atenciosamente, Comissão Técnica ACEDEP_`;
+                    const targetPhone = phone.length >= 10 ? (phone.startsWith('55') ? phone : `55${phone}`) : '5511981047553';
+                    return (
+                      <a
+                        href={`https://wa.me/${targetPhone}?text=${encodeURIComponent(msg)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 rounded-xl bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 font-semibold text-xs transition-all border border-emerald-500/30 flex items-center gap-1.5"
+                      >
+                        <Smartphone className="w-3.5 h-3.5" />
+                        <span>Enviar via WhatsApp do Responsável</span>
+                      </a>
+                    );
+                  })()}
                 </div>
               </form>
 
@@ -2417,31 +2714,51 @@ export const AdminCoachPortalModal: React.FC = () => {
               <div className="space-y-3">
                 <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                   <span>Histórico de Atualizações Enviadas por E-mail ({emailLogs.length})</span>
-                  <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] text-emerald-400 font-mono">
                     Sincronizado em Tempo Real
                   </span>
                 </h5>
 
                 <div className="space-y-2">
-                  {emailLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="p-3.5 rounded-xl bg-black/40 border border-[#1e3a5f] space-y-1.5 text-xs hover:border-white/20 transition-all"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-white text-xs">{log.title}</span>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 font-mono text-[10px] border border-emerald-500/20">
-                          {log.status === 'enviado' ? '✓ Enviado' : 'Pendente'}
-                        </span>
-                      </div>
-                      <p className="text-slate-300 text-[11px] line-clamp-2">{log.contentPreview}</p>
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400 pt-1 border-t border-white/5">
-                        <span>Destinatários: <strong className="text-slate-300">{log.recipientSummary}</strong></span>
-                        <span>{log.sentAt}</span>
-                      </div>
+                  {emailLogs.length === 0 ? (
+                    <div className="p-6 rounded-xl bg-black/30 border border-white/5 text-center text-xs text-slate-400">
+                      Nenhum e-mail enviado ainda.
                     </div>
-                  ))}
+                  ) : (
+                    emailLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="p-3.5 rounded-xl bg-black/40 border border-[#1e3a5f] space-y-1.5 text-xs hover:border-white/20 transition-all"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-white text-xs">{log.title}</span>
+                          <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] border ${
+                            log.status === 'enviado'
+                              ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                              : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                          }`}>
+                            {log.status === 'enviado' ? 'Enviado' : 'Registrado / Pendente'}
+                          </span>
+                        </div>
+                        <p className="text-slate-300 text-[11px] line-clamp-2">{log.contentPreview}</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400 pt-1 border-t border-white/5">
+                          <span>Destinatários: <strong className="text-slate-300">{log.recipientSummary}</strong></span>
+                          <div className="flex items-center gap-3">
+                            <span>{log.sentAt}</span>
+                            <a
+                              href={buildGmailWebUrl(log.title, log.contentPreview)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[#d4af37] hover:underline flex items-center gap-1"
+                            >
+                              <Mail className="w-3 h-3" />
+                              <span>Reenviar via Gmail Web</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
@@ -3323,20 +3640,18 @@ export const AdminCoachPortalModal: React.FC = () => {
                       />
                     </div>
 
-                    {!editingEventId && (
-                      <div className="flex items-center gap-2 text-xs text-slate-300">
-                        <input
-                          type="checkbox"
-                          id="notifyEventEmail"
-                          checked={eventNotifyEmail}
-                          onChange={(e) => setEventNotifyEmail(e.target.checked)}
-                          className="rounded border-[#1e3a5f] text-[#d4af37] focus:ring-[#d4af37]"
-                        />
-                        <label htmlFor="notifyEventEmail" className="cursor-pointer">
-                          📧 Disparar e-mail informativo com este evento para todos os pais cadastrados
-                        </label>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2 text-xs text-slate-300">
+                      <input
+                        type="checkbox"
+                        id="notifyEventEmail"
+                        checked={eventNotifyEmail}
+                        onChange={(e) => setEventNotifyEmail(e.target.checked)}
+                        className="rounded border-[#1e3a5f] text-[#d4af37] focus:ring-[#d4af37]"
+                      />
+                      <label htmlFor="notifyEventEmail" className="cursor-pointer">
+                        Disparar e-mail informativo com {editingEventId ? 'a atualização deste evento' : 'este evento'} para todos os pais cadastrados
+                      </label>
+                    </div>
 
                     {eventSuccess && (
                       <p className="text-xs text-emerald-400 flex items-center gap-1">
@@ -3599,36 +3914,38 @@ export const AdminCoachPortalModal: React.FC = () => {
 
                         return (
                           <div className="flex items-center gap-2">
-                            {target.guardianPhone && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const cleanPhone = target.guardianPhone.replace(/\D/g, '');
-                                  const waUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(body)}`;
-                                  window.open(waUrl, '_blank');
-                                }}
-                                className="px-3.5 py-3 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-600/30 transition-all cursor-pointer flex items-center gap-1.5"
-                                title="Enviar via WhatsApp"
-                              >
-                                <Phone className="w-3.5 h-3.5" />
-                                <span>WhatsApp</span>
-                              </button>
-                            )}
+                            {target.guardianPhone && (() => {
+                              const cleanPhone = target.guardianPhone.replace(/\D/g, '');
+                              const waUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(body)}`;
+                              return (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3.5 py-3 rounded-xl bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold hover:bg-emerald-600/30 transition-all flex items-center gap-1.5"
+                                  title="Enviar via WhatsApp"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              );
+                            })()}
 
-                            {target.guardianEmail && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(target.guardianEmail)}&su=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
-                                  window.open(gmailUrl, '_blank');
-                                }}
-                                className="px-3.5 py-3 rounded-xl bg-red-600/20 text-red-300 border border-red-500/30 text-xs font-bold hover:bg-red-600/30 transition-all cursor-pointer flex items-center gap-1.5"
-                                title="Abrir diretamente no Gmail"
-                              >
-                                <Mail className="w-3.5 h-3.5" />
-                                <span>Abrir no Gmail</span>
-                              </button>
-                            )}
+                            {target.guardianEmail && (() => {
+                              const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(target.guardianEmail)}&cc=${encodeURIComponent(`${OFFICIAL_HOTMAIL},${OFFICIAL_GMAIL}`)}&su=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+                              return (
+                                <a
+                                  href={gmailUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3.5 py-3 rounded-xl bg-red-600/20 text-red-300 border border-red-500/30 text-xs font-bold hover:bg-red-600/30 transition-all flex items-center gap-1.5"
+                                  title="Abrir diretamente no Gmail"
+                                >
+                                  <Mail className="w-3.5 h-3.5" />
+                                  <span>Abrir no Gmail</span>
+                                </a>
+                              );
+                            })()}
                           </div>
                         );
                       })()}
@@ -4397,225 +4714,7 @@ export const AdminCoachPortalModal: React.FC = () => {
             </div>
           )}
 
-          {/* =========================================================================
-              TAB: COMUNICAÇÃO POR E-MAIL AOS PAIS E RESPONSÁVEIS
-             ========================================================================= */}
-          {activeTab === 'emails' && (
-            <div className="space-y-6">
-              {/* Notice Banner */}
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#0a192f] to-[#122847] border border-[#1e3a5f] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-5 h-5 text-[#d4af37]" />
-                    <h4 className="text-sm font-bold text-white">Central de Informativos & Disparo aos Pais</h4>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Dispare comunicados oficiais para os <strong className="text-[#f3e5ab]">{getAllParentEmails().length} e-mails de responsáveis</strong> cadastrados.
-                  </p>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenGmailWeb()}
-                    className="px-3.5 py-2 rounded-xl bg-red-600/20 text-red-300 border border-red-500/40 text-xs font-bold hover:bg-red-600/30 transition-all cursor-pointer flex items-center gap-1.5"
-                    title="Abrir tela de envio no Gmail com todos os pais em Cópia Oculta (BCC)"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Abrir no Gmail Web</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenMailClient()}
-                    className="px-3.5 py-2 rounded-xl bg-white/10 text-white border border-white/15 text-xs font-bold hover:bg-white/20 transition-all cursor-pointer flex items-center gap-1.5"
-                    title="Abrir no Outlook, Thunderbird ou aplicativo de e-mail do sistema"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Cliente Padrão (Mailto)</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Form Compose Broadcast */}
-                <div className="lg:col-span-6 p-6 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] space-y-4">
-                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                    <Send className="w-4 h-4 text-[#d4af37]" />
-                    Redigir Comunicado Oficial
-                  </h4>
-
-                  <form onSubmit={handleSendBroadcast} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">Destinatários *</label>
-                        <select
-                          value={broadcastRecipientMode}
-                          onChange={(e) => setBroadcastRecipientMode(e.target.value as 'all' | 'specific')}
-                          className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
-                        >
-                          <option value="all">Todos os Pais ({getAllParentEmails().length} cadastrados)</option>
-                          <option value="specific">Responsável Específico</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">Tipo de Comunicado</label>
-                        <select
-                          value={broadcastType}
-                          onChange={(e) => setBroadcastType(e.target.value as any)}
-                          className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
-                        >
-                          <option value="boletim_geral">Boletim Geral / Circular</option>
-                          <option value="convocacao_competicao">Convocação de Competição</option>
-                          <option value="aviso_treino">Aviso de Treino / Piscina</option>
-                          <option value="documentacao_atestado">Documentação & Atestados</option>
-                          <option value="financeiro_mensalidade">Financeiro / Informes</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {broadcastRecipientMode === 'specific' && (
-                      <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">Selecione o Atleta / Pai *</label>
-                        <select
-                          value={broadcastSpecificAthleteId}
-                          onChange={(e) => setBroadcastSpecificAthleteId(e.target.value)}
-                          className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white focus:outline-none focus:border-[#d4af37]"
-                        >
-                          {athletes.map((a) => (
-                            <option key={a.id} value={a.id}>
-                              {a.name} • Resp: {a.guardianName} ({a.guardianEmail || 'Sem e-mail'})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">Assunto do E-mail *</label>
-                        <input
-                          type="text"
-                          required
-                          value={broadcastSubject}
-                          onChange={(e) => setBroadcastSubject(e.target.value)}
-                          placeholder="Ex: Convocação para o Circuito Paulista 2026"
-                          className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">Nome do Remetente</label>
-                        <input
-                          type="text"
-                          value={broadcastSender}
-                          onChange={(e) => setBroadcastSender(e.target.value)}
-                          placeholder="Ex: Coordenação Técnica ACEDEP"
-                          className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37]"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-xs font-semibold text-slate-300 block mb-1">Conteúdo da Mensagem *</label>
-                      <textarea
-                        required
-                        rows={4}
-                        value={broadcastBody}
-                        onChange={(e) => setBroadcastBody(e.target.value)}
-                        placeholder="Escreva as instruções para os pais, horários de saída do ônibus, itens para levar..."
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-black/50 border border-[#1e3a5f] text-white placeholder-slate-500 focus:outline-none focus:border-[#d4af37] resize-none"
-                      />
-                    </div>
-
-                    {broadcastSuccess && (
-                      <p className="text-xs text-emerald-400 flex items-center gap-1">
-                        <CheckCircle2 className="w-4 h-4 shrink-0" />
-                        <span>{broadcastSuccess}</span>
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <button
-                        type="submit"
-                        disabled={isSendingBroadcast}
-                        className="px-5 py-2.5 rounded-xl bg-[#d4af37] text-[#060e1c] font-bold text-xs hover:bg-[#b8952b] transition-all cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                      >
-                        {isSendingBroadcast ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Database className="w-3.5 h-3.5" />}
-                        <span>{isSendingBroadcast ? 'Gravando...' : 'Gravar no Histórico'}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleOpenGmailWeb(broadcastSubject, broadcastBody)}
-                        className="px-4 py-2.5 rounded-xl bg-red-600/20 text-red-300 border border-red-500/30 text-xs font-bold hover:bg-red-600/30 transition-all cursor-pointer flex items-center gap-1.5"
-                      >
-                        <Mail className="w-3.5 h-3.5" />
-                        <span>Abrir no Gmail</span>
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-                {/* Right: History of Sent / Logged Emails */}
-                <div className="lg:col-span-6 p-6 rounded-2xl bg-[#0a192f] border border-[#1e3a5f] space-y-4">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                    <div>
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <History className="w-4 h-4 text-[#d4af37]" />
-                        <span>Histórico de E-mails ({emailLogs.length})</span>
-                      </h4>
-                      <p className="text-[11px] text-slate-400">Registros gravados no Firestore</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
-                    {emailLogs.length === 0 ? (
-                      <div className="p-8 rounded-xl bg-black/30 border border-white/5 text-center text-xs text-slate-400">
-                        Nenhum comunicado enviado ainda.
-                      </div>
-                    ) : (
-                      emailLogs.map((log) => (
-                        <div
-                          key={log.id}
-                          className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-2 text-xs hover:border-white/10 transition-all"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <span className="font-bold text-white text-sm block">{log.title}</span>
-                              <p className="text-[10px] text-slate-400">
-                                Para: {log.recipientSummary} • Por: {log.senderName}
-                              </p>
-                            </div>
-                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-bold shrink-0">
-                              {log.status || 'Registrado'}
-                            </span>
-                          </div>
-
-                          <p className="text-slate-300 text-xs bg-white/5 p-2 rounded-lg leading-relaxed">
-                            {log.contentPreview}
-                          </p>
-
-                          <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400">
-                            <span>{new Date(log.sentAt).toLocaleString('pt-BR')}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleOpenGmailWeb(log.title, log.contentPreview)}
-                              className="text-[#d4af37] hover:underline flex items-center gap-1 cursor-pointer"
-                            >
-                              <Mail className="w-3 h-3" />
-                              <span>Reenviar via Gmail</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* =========================================================================
               TAB: SEGURANÇA, LGPD E ALTERAÇÃO DE SENHA DO ADMIN
