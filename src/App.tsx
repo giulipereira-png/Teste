@@ -148,7 +148,6 @@ export default function App() {
             {currentPage === 'equipe' && (
               <TeamPage
                 onBackToHome={() => handleNavigateToPage('home')}
-                onOpenEnrollModal={() => setEnrollModalOpen(true)}
                 onOpenSupportModal={() => setSupportModalOpen(true)}
                 onNavigateToPage={handleNavigateToPage}
               />
@@ -157,7 +156,6 @@ export default function App() {
             {currentPage === 'calendario' && (
               <CalendarPage
                 onBackToHome={() => handleNavigateToPage('home')}
-                onOpenEnrollModal={() => setEnrollModalOpen(true)}
                 onNavigateToPage={handleNavigateToPage}
               />
             )}

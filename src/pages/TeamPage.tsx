@@ -15,14 +15,12 @@ import { AthletesShowcase } from '../components/AthletesShowcase';
 
 interface TeamPageProps {
   onBackToHome: () => void;
-  onOpenEnrollModal: () => void;
   onOpenSupportModal: () => void;
   onNavigateToPage?: (page: string) => void;
 }
 
 export const TeamPage: React.FC<TeamPageProps> = ({ 
   onBackToHome, 
-  onOpenEnrollModal, 
   onOpenSupportModal,
   onNavigateToPage
 }) => {
@@ -76,13 +74,6 @@ export const TeamPage: React.FC<TeamPageProps> = ({
           </div>
 
           <div className="flex items-center gap-2.5">
-            <button
-              type="button"
-              onClick={onOpenEnrollModal}
-              className="px-3.5 py-2 rounded-xl bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] text-xs font-bold transition-all shadow-sm cursor-pointer"
-            >
-              Matricular Atleta
-            </button>
             <button
               type="button"
               onClick={onOpenSupportModal}

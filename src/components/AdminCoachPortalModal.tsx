@@ -326,6 +326,8 @@ export const AdminCoachPortalModal: React.FC = () => {
   const [isConnectingGoogle, setIsConnectingGoogle] = useState(false);
   const [testEmailSending, setTestEmailSending] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<string | null>(null);
+  const [unauthorizedDomain, setUnauthorizedDomain] = useState<string | null>(null);
+  const [copiedDomain, setCopiedDomain] = useState(false);
   const [pendingTestEmailConfirm, setPendingTestEmailConfirm] = useState(false);
   const [pendingBroadcastConfirm, setPendingBroadcastConfirm] = useState(false);
 
@@ -336,6 +338,7 @@ export const AdminCoachPortalModal: React.FC = () => {
   const handleConnectGoogle = async () => {
     setIsConnectingGoogle(true);
     setTestEmailResult(null);
+    setUnauthorizedDomain(null);
     try {
       const res = await connectGoogleAccount();
       if (res.success) {
@@ -343,6 +346,9 @@ export const AdminCoachPortalModal: React.FC = () => {
         setBroadcastSuccess(`Conta Google (${res.user?.email || OFFICIAL_GMAIL}) conectada com sucesso para envio direto!`);
       } else {
         setTestEmailResult(res.error || 'Falha ao conectar conta Google.');
+        if (res.unauthorizedDomain) {
+          setUnauthorizedDomain(res.unauthorizedDomain);
+        }
       }
     } finally {
       setIsConnectingGoogle(false);
@@ -354,6 +360,7 @@ export const AdminCoachPortalModal: React.FC = () => {
     setGoogleAuthStatus(getGoogleAuthStatus());
     setPendingTestEmailConfirm(false);
     setTestEmailResult(null);
+    setUnauthorizedDomain(null);
   };
 
   const handleSendTestEmail = async () => {
@@ -2455,19 +2462,62 @@ export const AdminCoachPortalModal: React.FC = () => {
                 )}
 
                 {testEmailResult && (
-                  <div className={`p-3 rounded-xl border text-xs flex items-center justify-between gap-2 ${
+                  <div className={`p-3.5 rounded-xl border text-xs space-y-2.5 ${
                     testEmailResult.includes('sucesso')
                       ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
                       : 'bg-amber-500/15 border-amber-500/30 text-amber-200'
                   }`}>
-                    <span>{testEmailResult}</span>
-                    <button
-                      type="button"
-                      onClick={() => setTestEmailResult(null)}
-                      className="text-slate-400 hover:text-white p-1 cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="leading-relaxed">{testEmailResult}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTestEmailResult(null);
+                          setUnauthorizedDomain(null);
+                        }}
+                        className="text-slate-400 hover:text-white p-1 cursor-pointer shrink-0"
+                        aria-label="Fechar aviso"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {unauthorizedDomain && (
+                      <div className="p-3 rounded-lg bg-black/40 border border-amber-500/30 text-[11px] text-slate-200 space-y-2">
+                        <p className="font-bold text-[#d4af37]">
+                          Como liberar o login com Google em "{unauthorizedDomain}":
+                        </p>
+                        <ol className="list-decimal list-inside space-y-1 text-slate-300">
+                          <li>Abra as configurações do Firebase Authentication do projeto.</li>
+                          <li>Vá em <strong>Settings (Configurações) → Authorized domains (Domínios autorizados)</strong>.</li>
+                          <li>Clique em <strong>Add domain</strong> e adicione: <code className="px-1.5 py-0.5 rounded bg-white/10 text-white">{unauthorizedDomain}</code></li>
+                        </ol>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(unauthorizedDomain);
+                              setCopiedDomain(true);
+                              setTimeout(() => setCopiedDomain(false), 2500);
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white font-semibold flex items-center gap-1.5 cursor-pointer"
+                          >
+                            {copiedDomain ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#d4af37]" />}
+                            <span>{copiedDomain ? 'Domínio copiado!' : `Copiar "${unauthorizedDomain}"`}</span>
+                          </button>
+
+                          <a
+                            href="https://console.firebase.google.com/project/gen-lang-client-0490377599/authentication/settings"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1.5 rounded-lg bg-[#d4af37] hover:bg-[#b8952b] text-[#060e1c] font-bold flex items-center gap-1.5"
+                          >
+                            <span>Abrir Firebase Console</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

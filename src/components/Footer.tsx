@@ -7,12 +7,10 @@ import {
   Facebook, 
   ShieldCheck,
   ChevronUp,
-  Lock,
-  UserPlus
+  Lock
 } from 'lucide-react';
 import { Logo } from './Logo';
 import { usePhotos } from '../context/PhotosContext';
-import { useCommunity } from '../context/CommunityContext';
 
 interface FooterProps {
   onOpenSupportModal: () => void;
@@ -38,7 +36,6 @@ export const Footer: React.FC<FooterProps> = ({
   onOpenFaqModal,
 }) => {
   const { openAdminModal, isAdminAuthenticated } = usePhotos();
-  const { setCoachManagerModalOpen } = useCommunity();
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -197,15 +194,6 @@ export const Footer: React.FC<FooterProps> = ({
                   Seja um Apoiador
                 </button>
               </li>
-              <li>
-                <button 
-                  onClick={openAdminModal}
-                  className="text-slate-500 hover:text-[#d4af37] transition-colors block py-0.5 cursor-pointer text-left flex items-center gap-1.5 text-xs"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Acesso Administrativo (Painel)</span>
-                </button>
-              </li>
             </ul>
           </div>
 
@@ -297,8 +285,8 @@ export const Footer: React.FC<FooterProps> = ({
               <button
                 type="button"
                 onClick={openAdminModal}
-                className="hover:text-[#d4af37] transition-colors cursor-pointer text-slate-400"
-                title="ACEDEP"
+                className="text-slate-400 bg-transparent border-0 p-0"
+                aria-label="ACEDEP Copyright"
               >
                 ©
               </button>{' '}
@@ -310,19 +298,17 @@ export const Footer: React.FC<FooterProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              onClick={openAdminModal}
-              id="btn-footer-admin-login"
-              className={`px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5 text-[11px] font-bold cursor-pointer ${
-                isAdminAuthenticated
-                  ? 'bg-[#d4af37]/20 text-[#f3e5ab] border border-[#d4af37]/40 hover:bg-[#d4af37]/30'
-                  : 'bg-white/5 text-slate-400 hover:text-white border border-white/10 hover:border-slate-700'
-              }`}
-              title="Painel de Administração"
-            >
-              <Lock className={`w-3 h-3 ${isAdminAuthenticated ? 'text-[#d4af37]' : 'text-slate-400'}`} />
-              <span>{isAdminAuthenticated ? 'Admin Conectado' : 'Acesso Admin'}</span>
-            </button>
+            {isAdminAuthenticated && (
+              <button
+                onClick={openAdminModal}
+                id="btn-footer-admin-login"
+                className="px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5 text-[11px] font-bold cursor-pointer bg-[#d4af37]/20 text-[#f3e5ab] border border-[#d4af37]/40 hover:bg-[#d4af37]/30"
+                title="Painel de Administração"
+              >
+                <Lock className="w-3 h-3 text-[#d4af37]" />
+                <span>Admin Conectado</span>
+              </button>
+            )}
 
             <button
               onClick={scrollToTop}

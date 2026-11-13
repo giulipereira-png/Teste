@@ -40,8 +40,8 @@ interface CalendarEventsSectionProps {
 }
 
 export const CalendarEventsSection: React.FC<CalendarEventsSectionProps> = ({ onOpenEnrollModal }) => {
-  const { annualEvents, addAnnualEvent, updateAnnualEvent, deleteAnnualEvent, setCoachManagerModalOpen } = useCommunity();
-  const { isAdminAuthenticated, openAdminModal } = usePhotos();
+  const { annualEvents, addAnnualEvent, updateAnnualEvent, deleteAnnualEvent } = useCommunity();
+  const { isAdminAuthenticated } = usePhotos();
 
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<number>(0); // 0 = all
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
@@ -165,8 +165,8 @@ export const CalendarEventsSection: React.FC<CalendarEventsSectionProps> = ({ on
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
-            {isAdminAuthenticated ? (
+          {isAdminAuthenticated && (
+            <div className="flex items-center gap-3 shrink-0">
               <button
                 onClick={handleOpenCreateModal}
                 className="px-4 py-2 rounded-xl bg-[#d4af37] hover:bg-[#f3e5ab] text-[#060e1c] text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
@@ -174,17 +174,8 @@ export const CalendarEventsSection: React.FC<CalendarEventsSectionProps> = ({ on
                 <Plus className="w-4 h-4" />
                 <span>Adicionar Competição / Evento</span>
               </button>
-            ) : (
-              <button
-                onClick={openAdminModal}
-                className="px-3.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-medium border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
-                title="Acesso da Comissão Técnica para atualizar datas"
-              >
-                <Edit3 className="w-3.5 h-3.5 text-[#d4af37]" />
-                <span>Atualizar Calendário</span>
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Compact Filters & Month Tabs Bar */}

@@ -150,17 +150,19 @@ export const AthleteDocumentsTab: React.FC<AthleteDocumentsTabProps> = ({
 
     setIsSubmitting(true);
 
-    // Auto sync to Google Drive in athlete folder
+    // Auto sync to Google Drive in athlete folder (staff/admin only)
     let driveInfo = undefined;
-    try {
-      driveInfo = await uploadDocumentToGoogleDrive({
-        athleteName: athlete.name,
-        documentTitle: cleanTitle.trim(),
-        fileName: uploadedFileName || `${cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
-        fileDataUrl: uploadedFileUrl,
-      });
-    } catch (driveErr) {
-      console.warn('Google Drive sync warning:', driveErr);
+    if (isStaff) {
+      try {
+        driveInfo = await uploadDocumentToGoogleDrive({
+          athleteName: athlete.name,
+          documentTitle: cleanTitle.trim(),
+          fileName: uploadedFileName || `${cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_')}.pdf`,
+          fileDataUrl: uploadedFileUrl,
+        });
+      } catch (driveErr) {
+        console.warn('Google Drive sync warning:', driveErr);
+      }
     }
 
     const newDocItem: AthleteDocumentItem = {
@@ -276,32 +278,34 @@ export const AthleteDocumentsTab: React.FC<AthleteDocumentsTabProps> = ({
           </div>
         </div>
 
-        {/* Google Drive Automatic Sync Banner */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-950/60 via-[#0a1e3b] to-blue-950/60 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-100 shadow-md">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-blue-500/20 text-blue-300">
-              <FolderOpen className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="font-bold text-white flex items-center gap-1.5">
-                <span>Google Drive Sincronizado</span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">Auto-Upload Ativo</span>
+        {/* Google Drive Automatic Sync Banner (Admin / Professor only) */}
+        {isStaff && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-blue-950/60 via-[#0a1e3b] to-blue-950/60 border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-100 shadow-md">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2 rounded-xl bg-blue-500/20 text-blue-300">
+                <FolderOpen className="w-4 h-4" />
               </div>
-              <p className="text-[11px] text-blue-200/80">
-                Todos os laudos e documentos anexados são enviados automaticamente para a pasta oficial do atleta no Google Drive.
-              </p>
+              <div>
+                <div className="font-bold text-white flex items-center gap-1.5">
+                  <span>Google Drive Sincronizado</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-bold">Auto-Upload Ativo</span>
+                </div>
+                <p className="text-[11px] text-blue-200/80">
+                  Todos os laudos e documentos anexados são enviados automaticamente para a pasta oficial do atleta no Google Drive.
+                </p>
+              </div>
             </div>
+            <a
+              href={`https://drive.google.com/drive/search?q=${encodeURIComponent(athlete.name)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/30 text-white text-xs font-semibold self-start sm:self-auto cursor-pointer transition-all"
+            >
+              <span>Ver Pasta no Drive</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
           </div>
-          <a
-            href={`https://drive.google.com/drive/search?q=${encodeURIComponent(athlete.name)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border border-blue-400/30 text-white text-xs font-semibold self-start sm:self-auto cursor-pointer transition-all"
-          >
-            <span>Ver Pasta no Drive</span>
-            <ExternalLink className="w-3.5 h-3.5" />
-          </a>
-        </div>
+        )}
 
         {/* Access Notice Badge */}
         <div className="p-3 rounded-xl bg-black/40 border border-white/5 flex items-center gap-2.5 text-xs text-slate-300">
@@ -471,17 +475,19 @@ export const AthleteDocumentsTab: React.FC<AthleteDocumentsTabProps> = ({
                         <span>Baixar Arquivo</span>
                       </button>
 
-                      {/* Google Drive Link */}
-                      <a
-                        href={docItem.driveViewLink || `https://drive.google.com/drive/search?q=${encodeURIComponent(docItem.fileName)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all border border-blue-500/30"
-                        title="Abrir no Google Drive"
-                      >
-                        <FolderOpen className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Google Drive</span>
-                      </a>
+                      {/* Google Drive Link (Admin / Professor only) */}
+                      {isStaff && (
+                        <a
+                          href={docItem.driveViewLink || `https://drive.google.com/drive/search?q=${encodeURIComponent(docItem.fileName)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-all border border-blue-500/30"
+                          title="Abrir no Google Drive"
+                        >
+                          <FolderOpen className="w-3.5 h-3.5 text-blue-400" />
+                          <span>Google Drive</span>
+                        </a>
+                      )}
                     </div>
 
                     {/* Delete Action */}

@@ -68,10 +68,18 @@ export function subscribeGoogleAuthStatus(listener: (status: GoogleAuthStatus) =
   };
 }
 
+export interface ConnectGoogleResult {
+  success: boolean;
+  user?: User;
+  error?: string;
+  errorCode?: string;
+  unauthorizedDomain?: string;
+}
+
 /**
  * Connect to Google account via Firebase Auth Popup with Gmail Send scope
  */
-export async function connectGoogleAccount(): Promise<{ success: boolean; user?: User; error?: string }> {
+export async function connectGoogleAccount(): Promise<ConnectGoogleResult> {
   if (isSigningIn) {
     return { success: false, error: 'Uma solicitação de login já está em andamento.' };
   }
@@ -95,8 +103,38 @@ export async function connectGoogleAccount(): Promise<{ success: boolean; user?:
     };
   } catch (err: any) {
     console.error('Erro ao conectar conta Google:', err);
+    const code = err?.code || '';
+    const msg = String(err?.message || '');
+    const currentHost = typeof window !== 'undefined' ? window.location.hostname : '';
+
+    if (code === 'auth/unauthorized-domain' || msg.includes('auth/unauthorized-domain')) {
+      return {
+        success: false,
+        errorCode: 'auth/unauthorized-domain',
+        unauthorizedDomain: currentHost,
+        error: `O domínio "${currentHost || 'atual'}" ainda não está na lista de Domínios Autorizados do Firebase Authentication. Adicione este domínio nas configurações do Firebase para liberar o login com o Google aqui.`,
+      };
+    }
+
+    if (code === 'auth/popup-blocked' || msg.includes('popup-blocked')) {
+      return {
+        success: false,
+        errorCode: 'auth/popup-blocked',
+        error: 'O navegador bloqueou a janela de login do Google. Permita pop-ups para este site e tente novamente.',
+      };
+    }
+
+    if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+      return {
+        success: false,
+        errorCode: code,
+        error: 'A janela de login do Google foi fechada antes da conclusão. Clique novamente para conectar.',
+      };
+    }
+
     return {
       success: false,
+      errorCode: code || undefined,
       error: err?.message || 'Falha ao conectar conta Google.',
     };
   } finally {

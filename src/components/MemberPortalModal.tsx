@@ -8,7 +8,6 @@ import {
   LogOut, 
   Waves, 
   KeyRound,
-  Mail,
   FileDown
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
@@ -21,7 +20,6 @@ import { MemberPortalHeader } from './member-portal/MemberPortalHeader';
 import { MemberTrainingTab } from './member-portal/MemberTrainingTab';
 import { MemberMetricsTab } from './member-portal/MemberMetricsTab';
 import { MemberMessagesTab } from './member-portal/MemberMessagesTab';
-import { MemberNotificationsTab } from './member-portal/MemberNotificationsTab';
 import { MemberSecurityTab } from './member-portal/MemberSecurityTab';
 import { MemberPhotoModal, AVATAR_PRESETS } from './member-portal/MemberPhotoModal';
 
@@ -36,12 +34,11 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
     isGuardianAuthenticated, 
     guardianLogout,
     saveAthleteRecord,
-    emailLogs,
     attendanceSessions,
   } = useCommunity();
 
   // Active Dashboard Tab
-  const [activeTab, setActiveTab] = useState<'treinos' | 'tempos' | 'documentos' | 'mensagens' | 'emails' | 'senha'>('treinos');
+  const [activeTab, setActiveTab] = useState<'treinos' | 'tempos' | 'documentos' | 'mensagens' | 'senha'>('treinos');
 
   // Photo modal state
   const [photoModalOpen, setPhotoModalOpen] = useState(false);
@@ -198,19 +195,6 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
                 </button>
 
                 <button
-                  id="tab-btn-emails"
-                  onClick={() => setActiveTab('emails')}
-                  className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
-                    activeTab === 'emails'
-                      ? 'bg-[#d4af37] text-[#060e1c] shadow'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>E-mails Recebidos</span>
-                </button>
-
-                <button
                   id="tab-btn-senha"
                   onClick={() => setActiveTab('senha')}
                   className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 whitespace-nowrap ${
@@ -246,14 +230,6 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
               {/* TAB 4: RECADOS DA COMISSÃO TÉCNICA */}
               {activeTab === 'mensagens' && (
                 <MemberMessagesTab athlete={currentAthlete} />
-              )}
-
-              {/* TAB 5: E-MAILS RECEBIDOS & INFORMATIVOS */}
-              {activeTab === 'emails' && (
-                <MemberNotificationsTab 
-                  athlete={currentAthlete} 
-                  emailLogs={emailLogs} 
-                />
               )}
 
               {/* TAB 6: MINHA SENHA */}

@@ -48,7 +48,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
   onOpenEnrollModal 
 }) => {
   const { annualEvents, addAnnualEvent, updateAnnualEvent, deleteAnnualEvent, setCoachManagerModalOpen } = useCommunity();
-  const { isAdminAuthenticated, openAdminModal } = usePhotos();
+  const { isAdminAuthenticated } = usePhotos();
 
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<number>(0); // 0 = all
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
@@ -415,14 +415,7 @@ export const CalendarModal: React.FC<CalendarModalProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {!isAdminAuthenticated ? (
-              <button
-                onClick={openAdminModal}
-                className="text-[11px] text-slate-400 hover:text-[#d4af37] transition-colors cursor-pointer"
-              >
-                Acesso do Treinador (Gerenciar)
-              </button>
-            ) : (
+            {isAdminAuthenticated && (
               <button
                 onClick={() => {
                   onClose();

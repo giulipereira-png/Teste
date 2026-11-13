@@ -39,17 +39,15 @@ const CATEGORY_COLORS: Record<EventCategory, { bg: string; text: string; border:
 
 interface CalendarPageProps {
   onBackToHome: () => void;
-  onOpenEnrollModal: () => void;
   onNavigateToPage?: (page: string) => void;
 }
 
 export const CalendarPage: React.FC<CalendarPageProps> = ({
   onBackToHome,
-  onOpenEnrollModal,
   onNavigateToPage
 }) => {
-  const { annualEvents, addAnnualEvent, updateAnnualEvent, deleteAnnualEvent, setCoachManagerModalOpen } = useCommunity();
-  const { isAdminAuthenticated, openAdminModal } = usePhotos();
+  const { annualEvents, addAnnualEvent, updateAnnualEvent, deleteAnnualEvent } = useCommunity();
+  const { isAdminAuthenticated } = usePhotos();
 
   const [selectedMonthFilter, setSelectedMonthFilter] = useState<number>(0);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('all');
@@ -205,8 +203,8 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            {isAdminAuthenticated && (
+          {isAdminAuthenticated && (
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
                 onClick={handleOpenCreateModal}
@@ -215,15 +213,8 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({
                 <Plus className="w-3.5 h-3.5" />
                 <span>Novo Evento</span>
               </button>
-            )}
-            <button
-              type="button"
-              onClick={onOpenEnrollModal}
-              className="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/15 text-slate-200 text-xs font-semibold border border-white/10 transition-all cursor-pointer"
-            >
-              Matricular Atleta
-            </button>
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Filter Controls Bar */}

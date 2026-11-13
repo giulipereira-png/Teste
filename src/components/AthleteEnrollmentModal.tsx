@@ -455,7 +455,7 @@ export const AthleteEnrollmentModal: React.FC<AthleteEnrollmentModalProps> = ({
                   ) : (
                     <>
                       <CalendarCheck className="w-4 h-4" />
-                      <span>Cadastrar Atleta</span>
+                      <span>Enviar Inscrição para Teste</span>
                     </>
                   )}
                 </button>
