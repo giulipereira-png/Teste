@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
 import { usePhotos } from '../context/PhotosContext';
+import { SubpageTopBar } from '../components/SubpageTopBar';
 import { AnnualCalendarEvent, EventCategory } from '../types';
 
 const MONTH_NAMES_SHORT = [
@@ -161,31 +162,11 @@ export const CalendarPage: React.FC<CalendarPageProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] pt-24 pb-20">
+    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] subpage-top-offset pb-28 md:pb-20">
       
       {/* Top Navigation & Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-[#1e3a5f]/60 mb-6">
-          <button
-            type="button"
-            onClick={onBackToHome}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-[#d4af37] border border-white/10 hover:border-[#d4af37] text-slate-200 hover:text-[#060e1c] text-xs font-semibold transition-all shadow-sm cursor-pointer group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-1 transition-transform" />
-            <span>Voltar para o Início</span>
-          </button>
-
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span 
-              onClick={onBackToHome} 
-              className="hover:text-white cursor-pointer transition-colors"
-            >
-              Início
-            </span>
-            <span>/</span>
-            <span className="text-[#d4af37] font-medium">Calendário Oficial 2026</span>
-          </div>
-        </div>
+        <SubpageTopBar currentLabel="Calendário Oficial 2026" onBackToHome={onBackToHome} />
 
         {/* Clean, Non-Bloated Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">

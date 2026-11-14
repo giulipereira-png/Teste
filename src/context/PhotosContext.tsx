@@ -263,51 +263,50 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   });
   const [adminModalOpen, setAdminModalOpen] = useState(false);
 
-  // Subscribe to real-time updates from Firestore collection `site_photos`
+  // Subscribe to real-time updates from Firestore collections `site_photos` and `gallery`
   useEffect(() => {
     let unsubscribeSitePhotos = () => {};
     let unsubscribeGallery = () => {};
-    let unsubscribeAdminUsers = () => {};
+    let checkedSitePhotosInit = false;
+    let checkedGalleryInit = false;
 
     try {
-      // 1. Site photos
       const photosCollection = collection(db, 'site_photos');
       const sitePhotosInitDocRef = doc(db, 'settings', 'site_photos_init');
 
-      getDoc(sitePhotosInitDocRef)
-        .then(async (initSnap) => {
-          if (!initSnap.exists()) {
+      unsubscribeSitePhotos = onSnapshot(
+        photosCollection,
+        async (snapshot) => {
+          setIsFirebaseConnected(true);
+          setIsLoading(false);
+
+          if (snapshot.empty && !checkedSitePhotosInit) {
+            checkedSitePhotosInit = true;
             try {
-              for (const [photoKey, photoInfo] of Object.entries(DEFAULT_PHOTOS)) {
-                const existingSnap = await getDoc(doc(db, 'site_photos', photoKey));
-                if (!existingSnap.exists()) {
-                  await setDoc(doc(db, 'site_photos', photoKey), {
-                    id: photoKey,
-                    title: photoInfo.title,
-                    category: photoInfo.category,
-                    url: photoInfo.defaultUrl,
-                    updatedAt: new Date().toISOString(),
-                    updatedBy: 'Sistema ACEDEP',
-                  });
+              const initSnap = await getDoc(sitePhotosInitDocRef);
+              if (!initSnap.exists()) {
+                for (const [photoKey, photoInfo] of Object.entries(DEFAULT_PHOTOS)) {
+                  const existingSnap = await getDoc(doc(db, 'site_photos', photoKey));
+                  if (!existingSnap.exists()) {
+                    await setDoc(doc(db, 'site_photos', photoKey), {
+                      id: photoKey,
+                      title: photoInfo.title,
+                      category: photoInfo.category,
+                      url: photoInfo.defaultUrl,
+                      updatedAt: new Date().toISOString(),
+                      updatedBy: 'Sistema ACEDEP',
+                    });
+                  }
                 }
+                await setDoc(sitePhotosInitDocRef, { initialized: true, seededAt: new Date().toISOString() });
               }
-              await setDoc(sitePhotosInitDocRef, { initialized: true, seededAt: new Date().toISOString() });
             } catch (seedErr) {
               handleFirestoreError(seedErr, OperationType.WRITE, 'site_photos_seed');
             }
+            return;
           }
-        })
-        .catch((err) => {
-          handleFirestoreError(err, OperationType.GET, 'settings/site_photos_init');
-        });
 
-      unsubscribeSitePhotos = onSnapshot(
-        photosCollection,
-        (snapshot) => {
-          setIsFirebaseConnected(true);
-          setIsLoading(false);
           const updated: Record<string, string> = {};
-
           Object.keys(DEFAULT_PHOTOS).forEach((k) => {
             try {
               const cached = localStorage.getItem('acedep_photo_' + k);
@@ -344,27 +343,9 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const galleryCollection = collection(db, 'gallery');
       const galleryInitDocRef = doc(db, 'settings', 'gallery_init');
 
-      // Check if initialization has occurred; if not, seed initial photos to Firestore
-      getDoc(galleryInitDocRef)
-        .then(async (initSnap) => {
-          if (!initSnap.exists()) {
-            try {
-              for (const photo of INITIAL_GALLERY_PHOTOS) {
-                await setDoc(doc(db, 'gallery', photo.id), photo);
-              }
-              await setDoc(galleryInitDocRef, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (seedErr) {
-              handleFirestoreError(seedErr, OperationType.WRITE, 'gallery_seed');
-            }
-          }
-        })
-        .catch((err) => {
-          handleFirestoreError(err, OperationType.GET, 'settings/gallery_init');
-        });
-
       unsubscribeGallery = onSnapshot(
         galleryCollection,
-        (snapshot) => {
+        async (snapshot) => {
           const list: GalleryPhotoItem[] = [];
           snapshot.forEach((docSnap) => {
             const data = docSnap.data() as GalleryPhotoItem;
@@ -376,81 +357,30 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             }
           });
 
-          // Sort by createdAt descending
           list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 
           if (list.length > 0) {
             setGalleryPhotos(list);
-          } else {
-            // Check if user has explicitly deleted all photos or if it's unseeded
-            getDoc(galleryInitDocRef)
-              .then((initSnap) => {
-                if (initSnap.exists()) {
-                  setGalleryPhotos([]); // Empty because user deleted all photos
-                } else {
-                  setGalleryPhotos(INITIAL_GALLERY_PHOTOS);
+          } else if (!checkedGalleryInit) {
+            checkedGalleryInit = true;
+            try {
+              const initSnap = await getDoc(galleryInitDocRef);
+              if (initSnap.exists()) {
+                setGalleryPhotos([]); // Empty because user deleted all photos
+              } else {
+                for (const photo of INITIAL_GALLERY_PHOTOS) {
+                  await setDoc(doc(db, 'gallery', photo.id), photo);
                 }
-              })
-              .catch(() => {
-                setGalleryPhotos([]);
-              });
+                await setDoc(galleryInitDocRef, { initialized: true, seededAt: new Date().toISOString() });
+                setGalleryPhotos(INITIAL_GALLERY_PHOTOS);
+              }
+            } catch (err) {
+              handleFirestoreError(err, OperationType.GET, 'settings/gallery_init');
+            }
           }
         },
         (error) => {
           handleFirestoreError(error, OperationType.LIST, 'gallery');
-        }
-      );
-
-      // 3. Admin Users
-      let unsubscribeAdminUsers = () => {};
-      const adminsCollection = collection(db, 'admin_users');
-      const adminInitDocRef = doc(db, 'settings', 'admin_users_init');
-
-      getDoc(adminInitDocRef)
-        .then(async (initSnap) => {
-          if (!initSnap.exists()) {
-            try {
-              for (const adm of INITIAL_ADMIN_USERS) {
-                await setDoc(doc(db, 'admin_users', adm.id), adm);
-              }
-              await setDoc(adminInitDocRef, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (seedErr) {
-              handleFirestoreError(seedErr, OperationType.WRITE, 'admin_users_seed');
-            }
-          }
-        })
-        .catch((err) => {
-          handleFirestoreError(err, OperationType.GET, 'settings/admin_users_init');
-        });
-
-      unsubscribeAdminUsers = onSnapshot(
-        adminsCollection,
-        (snapshot) => {
-          const list: AdminUser[] = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data() as AdminUser;
-            if (data && data.name) {
-              list.push({
-                ...data,
-                id: docSnap.id,
-              });
-            }
-          });
-
-          if (list.length > 0) {
-            setAdminUsers(list);
-            try {
-              // Só armazena em cache permanente do navegador se for sessão autenticada de admin
-              if (localStorage.getItem('acedep_admin_auth') === 'true') {
-                localStorage.setItem('acedep_cached_admin_users', JSON.stringify(list));
-              }
-            } catch {}
-          } else {
-            setAdminUsers(INITIAL_ADMIN_USERS);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'admin_users');
         }
       );
     } catch (err) {
@@ -461,9 +391,65 @@ export const PhotosProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       unsubscribeSitePhotos();
       unsubscribeGallery();
-      unsubscribeAdminUsers();
     };
   }, []);
+
+  // Subscribe to admin_users ONLY when admin is authenticated (loginAdmin fetches on demand)
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
+
+    let checkedAdminInit = false;
+    const adminsCollection = collection(db, 'admin_users');
+    const adminInitDocRef = doc(db, 'settings', 'admin_users_init');
+
+    const unsubscribeAdminUsers = onSnapshot(
+      adminsCollection,
+      async (snapshot) => {
+        if (snapshot.empty && !checkedAdminInit) {
+          checkedAdminInit = true;
+          try {
+            const initSnap = await getDoc(adminInitDocRef);
+            if (!initSnap.exists()) {
+              for (const adm of INITIAL_ADMIN_USERS) {
+                await setDoc(doc(db, 'admin_users', adm.id), adm);
+              }
+              await setDoc(adminInitDocRef, { initialized: true, seededAt: new Date().toISOString() });
+            }
+          } catch (seedErr) {
+            handleFirestoreError(seedErr, OperationType.WRITE, 'admin_users_seed');
+          }
+          return;
+        }
+
+        const list: AdminUser[] = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data() as AdminUser;
+          if (data && data.name) {
+            list.push({
+              ...data,
+              id: docSnap.id,
+            });
+          }
+        });
+
+        if (list.length > 0) {
+          setAdminUsers(list);
+          try {
+            localStorage.setItem('acedep_cached_admin_users', JSON.stringify(list));
+          } catch {}
+        } else {
+          setAdminUsers(INITIAL_ADMIN_USERS);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'admin_users');
+      }
+    );
+
+    return () => {
+      unsubscribeAdminUsers();
+    };
+  }, [isAdminAuthenticated]);
 
   // Secret triggers: URL pathname (/admin, /painel), URL Hash (#admin), query params (?admin=true), and keyboard shortcut (Ctrl+Shift+A)
   useEffect(() => {

@@ -65,7 +65,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
       >
         
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-4 border-b border-[#1e3a5f] bg-[#071326]/90 shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:py-4 border-b border-[#1e3a5f] bg-[#071326]/95 shrink-0">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] shrink-0">
               <Waves className="w-5 h-5" />
@@ -91,10 +91,10 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
               <button
                 type="button"
                 onClick={() => setExportModalOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer"
+                className="min-h-[40px] flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer"
                 title="Baixar Relatório em PDF"
               >
-                <FileDown className="w-3.5 h-3.5 text-[#d4af37]" />
+                <FileDown className="w-4 h-4 text-[#d4af37]" />
                 <span className="hidden sm:inline">Relatório</span>
               </button>
             )}
@@ -103,10 +103,10 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
               <button
                 id="btn-guardian-logout"
                 onClick={guardianLogout}
-                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                className="min-h-[40px] flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
                 title="Sair da Conta do Responsável"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
                 <span className="hidden sm:inline">Sair</span>
               </button>
             )}
@@ -114,7 +114,7 @@ export const MemberPortalModal: React.FC<MemberPortalModalProps> = ({ isOpen, on
             <button
               id="btn-close-member-portal"
               onClick={onClose}
-              className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
               aria-label="Fechar Portal"
             >
               <X className="w-5 h-5" />

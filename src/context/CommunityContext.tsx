@@ -10,6 +10,7 @@ import {
   onSnapshot 
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType, cleanFirestoreData } from '../lib/firebase';
+import { usePhotos } from './PhotosContext';
 import { optimizeImage } from '../lib/imageOptimizer';
 import { checkRateLimit, recordFailedAttempt, resetRateLimit } from '../utils/securityRateLimiter';
 import { sanitizeText } from '../utils/sanitizer';
@@ -160,6 +161,7 @@ const sanitizeAthletesForCache = (list: AthleteRecord[]): AthleteRecord[] => {
 };
 
 export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAdminAuthenticated } = usePhotos();
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>(INITIAL_NEWS_POSTS);
   const [cheers, setCheers] = useState<CommunityCheer[]>(INITIAL_COMMUNITY_CHEERS);
   const [athletes, setAthletes] = useState<AthleteRecord[]>(() => {
@@ -212,96 +214,194 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return Array.from(new Set(emails));
   };
 
-  // Realtime Firestore synchronization and auto-seeding
+  // 1. Public Firestore collections (news, cheers, annual events, sponsors)
   useEffect(() => {
-    let unsubscribeNews: () => void = () => {};
-    let unsubscribeCheers: () => void = () => {};
-    let unsubscribeAthletes: () => void = () => {};
-    let unsubscribeEmailLogs: () => void = () => {};
-    let unsubscribeAttendance: () => void = () => {};
-    let unsubscribeAnnualEvents: () => void = () => {};
-    let unsubscribeAuditLogs: () => void = () => {};
-    let unsubscribeSponsors: () => void = () => {};
+    let checkedNewsInit = false;
+    let checkedCheersInit = false;
+    let checkedEventsInit = false;
+    let checkedSponsorsInit = false;
 
-    const setupFirestore = async () => {
-      // 1. Sync News
-      const newsInitDoc = doc(db, 'settings', 'news_init');
-      getDoc(newsInitDoc)
-        .then(async (snap) => {
-          if (!snap.exists()) {
-            try {
+    const newsInitDoc = doc(db, 'settings', 'news_init');
+    const unsubscribeNews = onSnapshot(
+      collection(db, 'news_posts'),
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const list: NewsPost[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as NewsPost);
+          });
+          list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+          setNewsPosts(list);
+        } else if (!checkedNewsInit) {
+          checkedNewsInit = true;
+          try {
+            const snap = await getDoc(newsInitDoc);
+            if (snap.exists()) {
+              setNewsPosts([]);
+            } else {
               for (const post of INITIAL_NEWS_POSTS) {
                 await setDoc(doc(db, 'news_posts', post.id), post);
               }
               await setDoc(newsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (e) {
-              handleFirestoreError(e, OperationType.WRITE, 'news_posts_seed');
             }
+          } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'news_posts_seed');
           }
-        })
-        .catch((e) => {
-          handleFirestoreError(e, OperationType.GET, 'settings/news_init');
-        });
-
-      unsubscribeNews = onSnapshot(
-        collection(db, 'news_posts'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: NewsPost[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as NewsPost);
-            });
-            list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-            setNewsPosts(list);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'news_posts');
+        } else {
+          setNewsPosts([]);
         }
-      );
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'news_posts');
+      }
+    );
 
-      // 2. Sync Cheers
-      const cheersInitDoc = doc(db, 'settings', 'cheers_init');
-      getDoc(cheersInitDoc)
-        .then(async (snap) => {
-          if (!snap.exists()) {
-            try {
+    const cheersInitDoc = doc(db, 'settings', 'cheers_init');
+    const unsubscribeCheers = onSnapshot(
+      collection(db, 'community_cheers'),
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const list: CommunityCheer[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as CommunityCheer);
+          });
+          list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+          setCheers(list);
+        } else if (!checkedCheersInit) {
+          checkedCheersInit = true;
+          try {
+            const snap = await getDoc(cheersInitDoc);
+            if (snap.exists()) {
+              setCheers([]);
+            } else {
               for (const cheer of INITIAL_COMMUNITY_CHEERS) {
                 await setDoc(doc(db, 'community_cheers', cheer.id), cheer);
               }
               await setDoc(cheersInitDoc, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (e) {
-              handleFirestoreError(e, OperationType.WRITE, 'community_cheers_seed');
             }
+          } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'community_cheers_seed');
           }
-        })
-        .catch((e) => {
-          handleFirestoreError(e, OperationType.GET, 'settings/cheers_init');
-        });
-
-      unsubscribeCheers = onSnapshot(
-        collection(db, 'community_cheers'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: CommunityCheer[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as CommunityCheer);
-            });
-            list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-            setCheers(list);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'community_cheers');
+        } else {
+          setCheers([]);
         }
-      );
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'community_cheers');
+      }
+    );
 
-      // 3. Sync Athletes
-      const athletesInitDoc = doc(db, 'settings', 'athletes_init');
-      getDoc(athletesInitDoc)
-        .then(async (snap) => {
-          if (!snap.exists()) {
-            try {
+    const annualEventsInitDoc = doc(db, 'settings', 'annual_events_init');
+    const unsubscribeAnnualEvents = onSnapshot(
+      collection(db, 'annual_events'),
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const list: AnnualCalendarEvent[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as AnnualCalendarEvent);
+          });
+          list.sort((a, b) => a.month - b.month);
+          setAnnualEvents(list);
+        } else if (!checkedEventsInit) {
+          checkedEventsInit = true;
+          try {
+            const snap = await getDoc(annualEventsInitDoc);
+            if (snap.exists()) {
+              setAnnualEvents([]);
+            } else {
+              setAnnualEvents(INITIAL_ANNUAL_EVENTS);
+              for (const evt of INITIAL_ANNUAL_EVENTS) {
+                await setDoc(doc(db, 'annual_events', evt.id), evt);
+              }
+              await setDoc(annualEventsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
+            }
+          } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'annual_events_seed');
+          }
+        } else {
+          setAnnualEvents([]);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'annual_events');
+      }
+    );
+
+    const sponsorsInitDoc = doc(db, 'settings', 'sponsors_init');
+    const unsubscribeSponsors = onSnapshot(
+      collection(db, 'sponsors'),
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const list: SponsorItem[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as SponsorItem);
+          });
+          list.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+          setSponsors(list);
+          try {
+            localStorage.setItem('acedep_cached_sponsors', JSON.stringify(list));
+          } catch {}
+        } else if (!checkedSponsorsInit) {
+          checkedSponsorsInit = true;
+          try {
+            const snap = await getDoc(sponsorsInitDoc);
+            if (snap.exists()) {
+              setSponsors([]);
+              try {
+                localStorage.setItem('acedep_cached_sponsors', JSON.stringify([]));
+              } catch {}
+            } else {
+              setSponsors(INITIAL_SPONSORS);
+              for (const sp of INITIAL_SPONSORS) {
+                await setDoc(doc(db, 'sponsors', sp.id), cleanFirestoreData(sp));
+              }
+              await setDoc(sponsorsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
+            }
+          } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'sponsors_seed');
+          }
+        } else {
+          setSponsors([]);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'sponsors');
+      }
+    );
+
+    return () => {
+      unsubscribeNews();
+      unsubscribeCheers();
+      unsubscribeAnnualEvents();
+      unsubscribeSponsors();
+    };
+  }, []);
+
+  // 2. Authenticated Athlete & Attendance collections (Admin or Guardian logged in)
+  useEffect(() => {
+    if (!isAdminAuthenticated && !currentAthleteId) return;
+
+    let checkedAthletesInit = false;
+    let checkedAttendanceInit = false;
+
+    const athletesInitDoc = doc(db, 'settings', 'athletes_init');
+    const unsubscribeAthletes = onSnapshot(
+      collection(db, 'athletes'),
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const list: AthleteRecord[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as AthleteRecord);
+          });
+          setAthletes(list);
+          try {
+            localStorage.setItem('acedep_cached_athletes', JSON.stringify(sanitizeAthletesForCache(list)));
+          } catch {}
+        } else if (!checkedAthletesInit) {
+          checkedAthletesInit = true;
+          try {
+            const snap = await getDoc(athletesInitDoc);
+            if (!snap.exists()) {
               for (const athlete of INITIAL_ATHLETES) {
                 const existingSnap = await getDoc(doc(db, 'athletes', athlete.id));
                 if (!existingSnap.exists()) {
@@ -309,225 +409,113 @@ export const CommunityProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 }
               }
               await setDoc(athletesInitDoc, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (e) {
-              handleFirestoreError(e, OperationType.WRITE, 'athletes_seed');
             }
+          } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'athletes_seed');
           }
-        })
-        .catch((e) => {
-          handleFirestoreError(e, OperationType.GET, 'settings/athletes_init');
-        });
-
-      unsubscribeAthletes = onSnapshot(
-        collection(db, 'athletes'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: AthleteRecord[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as AthleteRecord);
-            });
-            setAthletes(list);
-            try {
-              localStorage.setItem('acedep_cached_athletes', JSON.stringify(sanitizeAthletesForCache(list)));
-            } catch {}
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'athletes');
         }
-      );
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'athletes');
+      }
+    );
 
-      // 4. Sync Email Notifications Log
-      const emailLogsInitDoc = doc(db, 'settings', 'email_logs_init');
-      getDoc(emailLogsInitDoc)
-        .then(async (snap) => {
-          if (!snap.exists()) {
-            try {
-              for (const logItem of INITIAL_EMAIL_LOGS) {
-                await setDoc(doc(db, 'email_notifications', logItem.id), logItem);
-              }
-              await setDoc(emailLogsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (e) {
-              handleFirestoreError(e, OperationType.WRITE, 'email_logs_seed');
-            }
-          }
-        })
-        .catch((e) => {
-          handleFirestoreError(e, OperationType.GET, 'settings/email_logs_init');
-        });
-
-      unsubscribeEmailLogs = onSnapshot(
-        collection(db, 'email_notifications'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: EmailNotificationLog[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as EmailNotificationLog);
-            });
-            list.sort((a, b) => (b.sentAt || '').localeCompare(a.sentAt || ''));
-            setEmailLogs(list);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'email_notifications');
-        }
-      );
-
-      // 5. Sync Attendance Sessions (Treinos e Campeonatos)
-      const attendanceInitDoc = doc(db, 'settings', 'attendance_init');
-      getDoc(attendanceInitDoc)
-        .then(async (snap) => {
-          if (!snap.exists()) {
-            try {
+    const attendanceInitDoc = doc(db, 'settings', 'attendance_init');
+    const unsubscribeAttendance = onSnapshot(
+      collection(db, 'attendance_sessions'),
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const list: AttendanceSession[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as AttendanceSession);
+          });
+          list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+          setAttendanceSessions(list);
+        } else if (!checkedAttendanceInit) {
+          checkedAttendanceInit = true;
+          setAttendanceSessions(INITIAL_ATTENDANCE_SESSIONS);
+          try {
+            const snap = await getDoc(attendanceInitDoc);
+            if (!snap.exists()) {
               for (const sess of INITIAL_ATTENDANCE_SESSIONS) {
                 await setDoc(doc(db, 'attendance_sessions', sess.id), sess);
               }
               await setDoc(attendanceInitDoc, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (e) {
-              handleFirestoreError(e, OperationType.WRITE, 'attendance_seed');
             }
+          } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'attendance_seed');
           }
-        })
-        .catch((e) => {
-          handleFirestoreError(e, OperationType.GET, 'settings/attendance_init');
-        });
-
-      unsubscribeAttendance = onSnapshot(
-        collection(db, 'attendance_sessions'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: AttendanceSession[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as AttendanceSession);
-            });
-            list.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-            setAttendanceSessions(list);
-          } else {
-            setAttendanceSessions(INITIAL_ATTENDANCE_SESSIONS);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'attendance_sessions');
         }
-      );
-
-      // 6. Sync Annual Calendar Events (Competições e Atividades Anuais)
-      const annualEventsInitDoc = doc(db, 'settings', 'annual_events_init');
-      getDoc(annualEventsInitDoc)
-        .then(async (snap) => {
-          if (!snap.exists()) {
-            try {
-              for (const evt of INITIAL_ANNUAL_EVENTS) {
-                await setDoc(doc(db, 'annual_events', evt.id), evt);
-              }
-              await setDoc(annualEventsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (e) {
-              handleFirestoreError(e, OperationType.WRITE, 'annual_events_seed');
-            }
-          }
-        })
-        .catch((e) => {
-          handleFirestoreError(e, OperationType.GET, 'settings/annual_events_init');
-        });
-
-      unsubscribeAnnualEvents = onSnapshot(
-        collection(db, 'annual_events'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: AnnualCalendarEvent[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as AnnualCalendarEvent);
-            });
-            list.sort((a, b) => a.month - b.month);
-            setAnnualEvents(list);
-          } else {
-            setAnnualEvents(INITIAL_ANNUAL_EVENTS);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'annual_events');
-        }
-      );
-
-      // 7. Sync Audit Logs (Rastreabilidade e Segurança de Alterações)
-      fetchAuditLogsFromFirestore().then((initialLogs) => {
-        if (initialLogs && initialLogs.length > 0) {
-          setAuditLogs(initialLogs);
-        }
-      });
-
-      unsubscribeAuditLogs = onSnapshot(
-        collection(db, 'audit_logs'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: AuditLogItem[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as AuditLogItem);
-            });
-            list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-            setAuditLogs(list);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'audit_logs');
-        }
-      );
-
-      // 8. Sync Sponsors & Supporters (Apoiadores e Patrocinadores)
-      const sponsorsInitDoc = doc(db, 'settings', 'sponsors_init');
-      getDoc(sponsorsInitDoc)
-        .then(async (snap) => {
-          if (!snap.exists()) {
-            try {
-              for (const sp of INITIAL_SPONSORS) {
-                await setDoc(doc(db, 'sponsors', sp.id), cleanFirestoreData(sp));
-              }
-              await setDoc(sponsorsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
-            } catch (e) {
-              handleFirestoreError(e, OperationType.WRITE, 'sponsors_seed');
-            }
-          }
-        })
-        .catch((e) => {
-          handleFirestoreError(e, OperationType.GET, 'settings/sponsors_init');
-        });
-
-      unsubscribeSponsors = onSnapshot(
-        collection(db, 'sponsors'),
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const list: SponsorItem[] = [];
-            snapshot.forEach((docSnap) => {
-              list.push({ ...docSnap.data(), id: docSnap.id } as SponsorItem);
-            });
-            list.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
-            setSponsors(list);
-            try {
-              localStorage.setItem('acedep_cached_sponsors', JSON.stringify(list));
-            } catch {}
-          } else {
-            setSponsors(INITIAL_SPONSORS);
-          }
-        },
-        (error) => {
-          handleFirestoreError(error, OperationType.LIST, 'sponsors');
-        }
-      );
-    };
-
-    setupFirestore();
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'attendance_sessions');
+      }
+    );
 
     return () => {
-      unsubscribeNews();
-      unsubscribeCheers();
       unsubscribeAthletes();
-      unsubscribeEmailLogs();
       unsubscribeAttendance();
-      unsubscribeAnnualEvents();
-      unsubscribeAuditLogs();
-      unsubscribeSponsors();
     };
-  }, []);
+  }, [isAdminAuthenticated, currentAthleteId]);
+
+  // 3. Admin-only collections (Email notification logs & Audit logs)
+  useEffect(() => {
+    if (!isAdminAuthenticated) return;
+
+    let checkedEmailLogsInit = false;
+    const emailLogsInitDoc = doc(db, 'settings', 'email_logs_init');
+    const unsubscribeEmailLogs = onSnapshot(
+      collection(db, 'email_notifications'),
+      async (snapshot) => {
+        if (!snapshot.empty) {
+          const list: EmailNotificationLog[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as EmailNotificationLog);
+          });
+          list.sort((a, b) => (b.sentAt || '').localeCompare(a.sentAt || ''));
+          setEmailLogs(list);
+        } else if (!checkedEmailLogsInit) {
+          checkedEmailLogsInit = true;
+          try {
+            const snap = await getDoc(emailLogsInitDoc);
+            if (!snap.exists()) {
+              for (const logItem of INITIAL_EMAIL_LOGS) {
+                await setDoc(doc(db, 'email_notifications', logItem.id), logItem);
+              }
+              await setDoc(emailLogsInitDoc, { initialized: true, seededAt: new Date().toISOString() });
+            }
+          } catch (e) {
+            handleFirestoreError(e, OperationType.WRITE, 'email_logs_seed');
+          }
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'email_notifications');
+      }
+    );
+
+    const unsubscribeAuditLogs = onSnapshot(
+      collection(db, 'audit_logs'),
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: AuditLogItem[] = [];
+          snapshot.forEach((docSnap) => {
+            list.push({ ...docSnap.data(), id: docSnap.id } as AuditLogItem);
+          });
+          list.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+          setAuditLogs(list);
+        }
+      },
+      (error) => {
+        handleFirestoreError(error, OperationType.LIST, 'audit_logs');
+      }
+    );
+
+    return () => {
+      unsubscribeEmailLogs();
+      unsubscribeAuditLogs();
+    };
+  }, [isAdminAuthenticated]);
 
   // Guardian Login with robust cross-device matching and anti-brute-force rate limiting
   const guardianLogin = async (identifier: string, accessCode: string): Promise<{ success: boolean; message?: string }> => {

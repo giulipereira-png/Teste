@@ -24,7 +24,7 @@ export const Hero: React.FC<HeroProps> = ({
   return (
     <section 
       id="home" 
-      className="relative min-h-[92vh] flex items-center justify-center pt-28 pb-16 overflow-hidden bg-[#0a192f]"
+      className="relative min-h-[92vh] flex items-center justify-center subpage-top-offset pb-14 sm:pb-16 overflow-hidden bg-[#0a192f]"
     >
       {/* Background Image with Darkened Cinematic Overlays */}
       <div className="absolute inset-0 z-0">
@@ -50,24 +50,23 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Decorative Gold Light Beam Effect */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-[#d4af37]/10 rounded-full blur-[140px] pointer-events-none" />
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-6 sm:py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
           
           {/* Left Column: Main Institutional Copy */}
-          <div className="lg:col-span-8 text-left space-y-6">
+          <div className="lg:col-span-8 text-left space-y-5 sm:space-y-6">
             
-            {/* Top Eyebrow Tag / Pill */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 border border-[#d4af37]/40 text-[#f3e5ab] text-xs font-semibold backdrop-blur-md shadow-sm">
-              <span className="flex h-2 w-2 rounded-full bg-[#d4af37] animate-ping" />
-              <span className="uppercase tracking-widest text-[11px] text-[#d4af37]">
+            {/* Top Eyebrow */}
+            <div className="inline-flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] sm:text-xs font-semibold text-[#f3e5ab]">
+              <span className="uppercase tracking-wider text-[#d4af37] font-bold">
                 Associação Cultural Especial Paradesportiva Paulista
               </span>
-              <span className="text-slate-400">|</span>
-              <span className="text-slate-200">Desde 1990</span>
+              <span className="text-slate-500" aria-hidden="true">·</span>
+              <span className="text-slate-300">Desde 1990</span>
             </div>
 
             {/* Main Punchy Title */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12]">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-white tracking-tight leading-[1.12] [text-wrap:balance]">
               Apoiando a inclusão social através da{' '}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#d4af37]">
                 Natação
@@ -84,11 +83,11 @@ export const Hero: React.FC<HeroProps> = ({
             </p>
 
             {/* CTA Buttons */}
-            <div className="pt-3 flex flex-wrap items-center gap-4">
+            <div className="pt-3 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
               <a
                 href="#modalidades"
                 id="btn-hero-projetos"
-                className="group inline-flex items-center justify-center gap-2.5 px-6 sm:px-7 py-3.5 rounded-md bg-gradient-to-r from-[#d4af37] via-[#e5c058] to-[#c49e29] text-[#060e1c] font-bold text-sm sm:text-base tracking-wide shadow-xl shadow-[#d4af37]/20 hover:shadow-[#d4af37]/40 transition-all duration-200 active:scale-95"
+                className="group inline-flex items-center justify-center gap-2.5 min-h-[48px] px-6 sm:px-7 py-3.5 rounded-xl sm:rounded-md bg-gradient-to-r from-[#d4af37] via-[#e5c058] to-[#c49e29] text-[#060e1c] font-bold text-sm sm:text-base tracking-wide shadow-xl shadow-[#d4af37]/20 hover:shadow-[#d4af37]/40 transition-all duration-200 active:scale-[0.98]"
               >
                 <span>Conheça Nossos Projetos</span>
                 <ChevronRight className="w-5 h-5 text-[#060e1c] group-hover:translate-x-1 transition-transform" />
@@ -97,7 +96,7 @@ export const Hero: React.FC<HeroProps> = ({
               <button
                 onClick={onOpenContactModal}
                 id="btn-hero-contato"
-                className="inline-flex items-center justify-center gap-2 px-6 sm:px-7 py-3.5 rounded-md bg-white/5 hover:bg-white/10 text-white font-semibold text-sm sm:text-base border border-slate-600 hover:border-[#d4af37] transition-all duration-200 backdrop-blur-sm cursor-pointer"
+                className="inline-flex items-center justify-center gap-2 min-h-[48px] px-6 sm:px-7 py-3.5 rounded-xl sm:rounded-md bg-white/5 hover:bg-white/10 text-white font-semibold text-sm sm:text-base border border-slate-600 hover:border-[#d4af37] transition-all duration-200 backdrop-blur-sm cursor-pointer active:scale-[0.98]"
               >
                 <span>Entre em Contato</span>
               </button>
@@ -105,7 +104,7 @@ export const Hero: React.FC<HeroProps> = ({
               <button
                 onClick={onOpenEnrollModal}
                 id="btn-hero-peneira"
-                className="group inline-flex items-center justify-center gap-2.5 px-6 sm:px-7 py-3.5 rounded-md bg-[#0e2547] hover:bg-[#153460] text-[#f3e5ab] hover:text-white font-bold text-sm sm:text-base border-2 border-[#d4af37] shadow-lg shadow-black/40 hover:shadow-[#d4af37]/25 transition-all duration-200 active:scale-95 cursor-pointer"
+                className="group inline-flex items-center justify-center gap-2.5 min-h-[48px] px-6 sm:px-7 py-3.5 rounded-xl sm:rounded-md bg-[#0e2547] hover:bg-[#153460] text-[#f3e5ab] hover:text-white font-bold text-sm sm:text-base border-2 border-[#d4af37] shadow-lg shadow-black/40 hover:shadow-[#d4af37]/25 transition-all duration-200 active:scale-[0.98] cursor-pointer"
               >
                 <Waves className="w-5 h-5 text-[#d4af37] group-hover:scale-110 transition-transform" />
                 <span>Avaliação de Novos Atletas</span>

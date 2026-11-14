@@ -21,41 +21,47 @@ export const CommunityNewsModal: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={() => setSelectedNewsForModal(null)}
+    >
       <div 
-        className="relative w-full max-w-3xl max-h-[90vh] bg-[#0c1f38] border border-[#1e3a5f] rounded-3xl shadow-2xl overflow-hidden flex flex-col"
+        className="relative w-full max-w-3xl h-[100dvh] sm:h-auto sm:max-h-[90vh] bg-[#0c1f38] border-0 sm:border border-[#1e3a5f] rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header Action Bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e3a5f] bg-[#071326]/80">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-[#1e3a5f] bg-[#071326]/95 shrink-0">
           <button
             onClick={() => setSelectedNewsForModal(null)}
-            className="flex items-center gap-2 text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="min-h-[44px] px-2 flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-200 hover:text-white transition-colors cursor-pointer"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="w-4 h-4 text-[#d4af37]" />
             <span>Voltar ao Mural</span>
           </button>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => likeNewsPost(selectedNewsForModal.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-rose-500/20 text-rose-300 border border-white/10 text-xs font-semibold transition-colors cursor-pointer"
+              className="min-h-[40px] flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-rose-500/20 text-rose-300 border border-white/10 text-xs font-semibold transition-colors cursor-pointer"
             >
               <Heart className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-              <span>{selectedNewsForModal.likesCount || 0} Curtidas</span>
+              <span>{selectedNewsForModal.likesCount || 0}</span>
+              <span className="hidden sm:inline">Curtidas</span>
             </button>
 
             <button
               onClick={handleShare}
-              className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
               title="Compartilhar notícia"
+              aria-label="Compartilhar notícia"
             >
               <Share2 className="w-4 h-4" />
             </button>
 
             <button
               onClick={() => setSelectedNewsForModal(null)}
-              className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Fechar notícia"
             >
               <X className="w-5 h-5" />
             </button>
@@ -63,7 +69,7 @@ export const CommunityNewsModal: React.FC = () => {
         </div>
 
         {/* Scrollable Content */}
-        <div className="overflow-y-auto p-6 sm:p-8 space-y-6">
+        <div className="overflow-y-auto p-4 sm:p-8 space-y-6 flex-1 touch-scroll overscroll-y-contain pb-[max(2rem,env(safe-area-inset-bottom))]">
           {/* Category & Date */}
           <div className="flex flex-wrap items-center gap-3">
             <span className="px-3 py-1 rounded-full bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#f3e5ab] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">

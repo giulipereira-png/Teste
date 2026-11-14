@@ -9,6 +9,13 @@
     --color-gold-primary: #d4af37;
     --color-gold-hover: #c49e29;
     --color-gold-light: #f3e5ab;
+    --navbar-initial-height: 128px;
+  }
+
+  @media (max-width: 767px) {
+    :root {
+      --navbar-initial-height: 72px;
+    }
   }
 
   html {
@@ -29,6 +36,33 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     touch-action: manipulation;
+  }
+
+  /* Prevent automatic viewport zoom when focusing inputs on mobile Safari/Chrome */
+  @media (max-width: 639px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="password"],
+    input[type="search"],
+    input[type="number"],
+    input[type="url"],
+    input[type="date"],
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
+
+/* Guaranteed clearance below fixed navbar across all subpages and screen widths */
+.subpage-top-offset {
+  padding-top: calc(var(--navbar-initial-height, 128px) + 16px);
+}
+
+@media (max-width: 767px) {
+  .subpage-top-offset {
+    padding-top: calc(var(--navbar-initial-height, 72px) + 12px);
   }
 }
 
@@ -69,4 +103,3 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-

@@ -9,6 +9,7 @@ import {
   HeartHandshake
 } from 'lucide-react';
 import { FaqSection } from '../components/FaqSection';
+import { SubpageTopBar } from '../components/SubpageTopBar';
 
 interface FaqPageProps {
   onBackToHome: () => void;
@@ -28,31 +29,11 @@ export const FaqPage: React.FC<FaqPageProps> = ({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] pt-24 pb-20">
+    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] subpage-top-offset pb-28 md:pb-20">
       
       {/* Top Navigation & Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-[#1e3a5f]/60 mb-6">
-          <button
-            type="button"
-            onClick={onBackToHome}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-[#d4af37] border border-white/10 hover:border-[#d4af37] text-slate-200 hover:text-[#060e1c] text-xs font-semibold transition-all shadow-sm cursor-pointer group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-1 transition-transform" />
-            <span>Voltar para o Início</span>
-          </button>
-
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span 
-              onClick={onBackToHome} 
-              className="hover:text-white cursor-pointer transition-colors"
-            >
-              Início
-            </span>
-            <span>/</span>
-            <span className="text-[#d4af37] font-medium">Perguntas Frequentes (FAQ)</span>
-          </div>
-        </div>
+        <SubpageTopBar currentLabel="Perguntas Frequentes (FAQ)" onBackToHome={onBackToHome} />
 
         {/* Clean, Non-Bloated Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
@@ -100,12 +81,12 @@ export const FaqPage: React.FC<FaqPageProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto shrink-0">
             <a
               href="https://wa.me/5511981047553"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow"
             >
               <Phone className="w-4 h-4" />
               <span>WhatsApp (11) 98104-7553</span>
@@ -115,7 +96,7 @@ export const FaqPage: React.FC<FaqPageProps> = ({
               href="https://wa.me/5511988231504"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shadow"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow"
             >
               <Phone className="w-4 h-4" />
               <span>WhatsApp (11) 98823-1504</span>
@@ -123,7 +104,7 @@ export const FaqPage: React.FC<FaqPageProps> = ({
 
             <button
               onClick={onBackToHome}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
             >
               Voltar ao Início
             </button>

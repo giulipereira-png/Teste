@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
+import { MobileBottomBar } from './components/MobileBottomBar';
 import { Hero } from './components/Hero';
 import { TeamPhotoBanner } from './components/TeamPhotoBanner';
 import { ModalitiesSection } from './components/ModalitiesSection';
@@ -30,6 +31,7 @@ import { AthleteEnrollmentModal } from './components/AthleteEnrollmentModal';
 import { MemberPortalModal } from './components/MemberPortalModal';
 import { AdminCoachPortalModal } from './components/AdminCoachPortalModal';
 import { CommunityNewsModal } from './components/CommunityNewsModal';
+import { FirestoreQuotaNotice } from './components/FirestoreQuotaNotice';
 
 import { PhotosProvider, usePhotos } from './context/PhotosContext';
 import { CommunityProvider, useCommunity } from './context/CommunityContext';
@@ -79,10 +81,12 @@ export default function App() {
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [enrollModalOpen, setEnrollModalOpen] = useState(false);
   const [memberPortalOpen, setMemberPortalOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleNavigateToPage = (page: AppPage) => {
+    setMobileMenuOpen(false);
     setCurrentPage(page);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
   };
 
   return (
@@ -96,6 +100,8 @@ export default function App() {
             onOpenSupportModal={() => setSupportModalOpen(true)}
             onOpenContactModal={() => setContactModalOpen(true)}
             onOpenMemberPortal={() => setMemberPortalOpen(true)}
+            mobileMenuOpen={mobileMenuOpen}
+            onSetMobileMenuOpen={setMobileMenuOpen}
           />
 
           {/* Main Content Area: Conditional rendering based on active Page */}
@@ -232,6 +238,22 @@ export default function App() {
           <CommunityNewsModal />
 
           <AdminCoachPortalModal />
+
+          <FirestoreQuotaNotice />
+
+          {currentPage !== 'admin' && (
+            <MobileBottomBar
+              currentPage={currentPage}
+              mobileMenuOpen={mobileMenuOpen}
+              onNavigateHome={() => handleNavigateToPage('home')}
+              onNavigateCalendar={() => handleNavigateToPage('calendario')}
+              onOpenMemberPortal={() => {
+                setMobileMenuOpen(false);
+                setMemberPortalOpen(true);
+              }}
+              onToggleMobileMenu={() => setMobileMenuOpen((prev) => !prev)}
+            />
+          )}
 
           {/* Guarda de segurança de sessão contra abandono de tela aberta */}
           <SecuritySessionWatcher />

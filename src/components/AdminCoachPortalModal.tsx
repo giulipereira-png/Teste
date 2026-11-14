@@ -58,6 +58,7 @@ import { SyncDiagnosticCard } from './SyncDiagnosticCard';
 import { SyncDiagnosticModal } from './SyncDiagnosticModal';
 import { AdminAuditLogsTab } from './AdminAuditLogsTab';
 import { AdminBackupTab } from './AdminBackupTab';
+import { FirestoreQuotaNotice } from './FirestoreQuotaNotice';
 import { AdminSponsorsTab } from './admin/AdminSponsorsTab';
 import { 
   connectGoogleAccount, 
@@ -1261,7 +1262,7 @@ export const AdminCoachPortalModal: React.FC = () => {
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="flex items-center justify-between px-3.5 py-3 sm:px-6 sm:py-4 border-b border-[#1e3a5f] bg-[#071326]/95 shrink-0">
+        <div className="flex items-center justify-between px-3.5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6 sm:py-4 border-b border-[#1e3a5f] bg-[#071326]/95 shrink-0">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="p-2 rounded-xl bg-[#d4af37]/20 border border-[#d4af37]/40 text-[#d4af37] shrink-0">
               {isAdminAuthenticated ? <Waves className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
@@ -1299,10 +1300,11 @@ export const AdminCoachPortalModal: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setDiagnosticModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                  className="min-w-[40px] min-h-[40px] inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#d4af37]/15 hover:bg-[#d4af37]/25 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
                   title="Diagnóstico de sincronização em tempo real do Firestore e Storage"
+                  aria-label="Diagnóstico Nuvem"
                 >
-                  <Activity className="w-3.5 h-3.5 text-[#d4af37] animate-pulse" />
+                  <Activity className="w-4 h-4 text-[#d4af37]" />
                   <span className="hidden md:inline">Diagnóstico Nuvem</span>
                 </button>
 
@@ -1316,31 +1318,36 @@ export const AdminCoachPortalModal: React.FC = () => {
                     setExportModalAthleteId(undefined);
                     setExportModalOpen(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                  className="min-w-[40px] min-h-[40px] inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-[#d4af37]/20 hover:bg-[#d4af37]/35 text-[#f3e5ab] border border-[#d4af37]/40 text-xs font-semibold transition-colors cursor-pointer shadow-sm"
                   title="Exportar dados e relatórios em PDF"
+                  aria-label="Exportar Relatórios"
                 >
-                  <FileDown className="w-3.5 h-3.5 text-[#d4af37]" />
+                  <FileDown className="w-4 h-4 text-[#d4af37]" />
                   <span className="hidden sm:inline">Exportar Relatórios</span>
                 </button>
 
                 <button
                   onClick={logoutAdmin}
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                  className="min-w-[40px] min-h-[40px] inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold transition-colors cursor-pointer"
                   title="Encerrar sessão"
+                  aria-label="Sair"
                 >
-                  <LogOut className="w-3.5 h-3.5" />
+                  <LogOut className="w-4 h-4" />
                   <span className="hidden sm:inline">Sair</span>
                 </button>
               </>
             )}
             <button
               onClick={handleCloseModal}
-              className="p-1.5 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Fechar painel"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         </div>
+
+        <FirestoreQuotaNotice compact />
 
         {!isAdminAuthenticated ? (
           /* =========================================================================

@@ -27,23 +27,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToHome }) => {
   };
 
   return (
-    <div className="min-h-screen bg-[#060e1c] text-white flex flex-col justify-between p-4 sm:p-8">
+    <div className="min-h-screen bg-[#060e1c] text-white flex flex-col justify-between subpage-top-offset px-4 sm:px-8 pb-10">
       {/* Header */}
-      <div className="max-w-6xl mx-auto w-full flex items-center justify-between border-b border-white/10 pb-4">
-        <div className="flex items-center gap-3">
-          <Logo className="h-10 w-auto" />
-          <div>
-            <h1 className="text-base sm:text-lg font-bold font-serif text-[#f3e5ab]">
+      <div className="max-w-6xl mx-auto w-full flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Logo className="h-10 w-auto shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-base sm:text-lg font-bold font-serif text-[#f3e5ab] truncate">
               ACEDEP Natação Paralímpica
             </h1>
-            <p className="text-xs text-slate-400">Portal de Gestão & Comissão Técnica</p>
+            <p className="text-xs text-slate-400 truncate">Portal de Gestão & Comissão Técnica</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setDiagnosticOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#d4af37] text-xs font-semibold transition-all border border-[#d4af37]/30 cursor-pointer"
+            className="inline-flex items-center gap-1.5 min-h-[44px] px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-[#d4af37] text-xs font-semibold transition-all border border-[#d4af37]/30 cursor-pointer"
             title="Verificar status da sincronização do banco de dados"
           >
             <Activity className="w-4 h-4" />
@@ -52,7 +52,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({ onBackToHome }) => {
 
           <button
             onClick={handleBack}
-            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold transition-all border border-white/10 cursor-pointer"
+            className="inline-flex items-center gap-2 min-h-[44px] px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold transition-all border border-white/10 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar ao Site</span>

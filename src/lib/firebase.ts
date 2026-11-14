@@ -1,7 +1,9 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   initializeFirestore,
-  getFirestore, 
+  getFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   doc, 
   getDoc, 
   setDoc, 
@@ -20,10 +22,19 @@ import config from '../../firebase-applet-config.json';
 
 const typedConfig = config as typeof config & { firestoreDatabaseId?: string };
 
+export const FIRESTORE_PROJECT_ID = typedConfig.projectId || 'gen-lang-client-0490377599';
+export const FIRESTORE_DATABASE_ID =
+  typedConfig.firestoreDatabaseId && typedConfig.firestoreDatabaseId !== '(default)'
+    ? typedConfig.firestoreDatabaseId
+    : 'ai-studio-acedepassociaocu-fe62783f-4d2c-46d8-afc3-af28924ec5f2';
+
+export const FIRESTORE_QUOTA_CONSOLE_URL = `https://console.firebase.google.com/project/${FIRESTORE_PROJECT_ID}/firestore/databases/${FIRESTORE_DATABASE_ID}/data?openUpgradeDialog=true`;
+export const FIRESTORE_PRICING_URL = 'https://firebase.google.com/pricing#cloud-firestore';
+
 const firebaseConfig = {
   apiKey: typedConfig.apiKey,
   authDomain: typedConfig.authDomain,
-  projectId: typedConfig.projectId,
+  projectId: FIRESTORE_PROJECT_ID,
   storageBucket: typedConfig.storageBucket,
   messagingSenderId: typedConfig.messagingSenderId,
   appId: typedConfig.appId,
@@ -31,23 +42,65 @@ const firebaseConfig = {
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firestore with robust long-polling support and undefined properties handling
-const databaseId = typedConfig.firestoreDatabaseId && typedConfig.firestoreDatabaseId !== '(default)' 
-  ? typedConfig.firestoreDatabaseId 
-  : 'ai-studio-acedepassociaocu-fe62783f-4d2c-46d8-afc3-af28924ec5f2';
-
 let firestoreDb;
 try {
-  firestoreDb = initializeFirestore(app, {
-    experimentalForceLongPolling: true,
-    ignoreUndefinedProperties: true,
-  }, databaseId);
+  // Enable persistent IndexedDB cache so photos and cloud data remain cached across refreshes/tabs
+  // and drastically reduce Firestore daily read units consumption
+  firestoreDb = initializeFirestore(
+    app,
+    {
+      experimentalForceLongPolling: true,
+      ignoreUndefinedProperties: true,
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    },
+    FIRESTORE_DATABASE_ID
+  );
 } catch {
-  firestoreDb = databaseId ? getFirestore(app, databaseId) : getFirestore(app);
+  try {
+    firestoreDb = initializeFirestore(
+      app,
+      {
+        experimentalForceLongPolling: true,
+        ignoreUndefinedProperties: true,
+      },
+      FIRESTORE_DATABASE_ID
+    );
+  } catch {
+    firestoreDb = FIRESTORE_DATABASE_ID
+      ? getFirestore(app, FIRESTORE_DATABASE_ID)
+      : getFirestore(app);
+  }
 }
 
 export const db = firestoreDb;
 export const auth = getAuth(app);
+
+// Global Firestore Quota Exceeded notification state
+let quotaExceededState = false;
+let quotaErrorMessage = '';
+const quotaListeners = new Set<(exceeded: boolean, message: string) => void>();
+
+export function getFirestoreQuotaExceeded(): { exceeded: boolean; message: string } {
+  return { exceeded: quotaExceededState, message: quotaErrorMessage };
+}
+
+export function subscribeFirestoreQuotaError(
+  listener: (exceeded: boolean, message: string) => void
+): () => void {
+  quotaListeners.add(listener);
+  listener(quotaExceededState, quotaErrorMessage);
+  return () => {
+    quotaListeners.delete(listener);
+  };
+}
+
+function notifyQuotaError(message: string) {
+  quotaExceededState = true;
+  quotaErrorMessage = message;
+  quotaListeners.forEach((cb) => cb(true, message));
+}
 
 // Helper to remove any undefined fields before writing to Firestore
 export function cleanFirestoreData<T>(obj: T): T {
@@ -82,7 +135,19 @@ export interface FirestoreErrorInfo {
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errMessage = error instanceof Error ? error.message : String(error);
-  // Log handled warning without crashing UI
+  const errCode = (error as any)?.code ? String((error as any).code) : '';
+  const lowerMsg = errMessage.toLowerCase();
+
+  if (
+    errCode === 'resource-exhausted' ||
+    lowerMsg.includes('quota exceeded') ||
+    lowerMsg.includes('resource-exhausted') ||
+    lowerMsg.includes('free daily read units') ||
+    lowerMsg.includes('429')
+  ) {
+    notifyQuotaError(errMessage);
+  }
+
   console.warn(`Firestore [${operationType}] at [${path || 'root'}]:`, errMessage);
 }
 
@@ -91,9 +156,7 @@ export async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
   } catch (error) {
-    if (error instanceof Error && error.message.includes('the client is offline')) {
-      console.warn('Firestore operating in offline cache mode. Please check your Firebase configuration.');
-    }
+    handleFirestoreError(error, OperationType.GET, 'test/connection');
   }
 }
 
@@ -105,4 +168,3 @@ if (typeof window !== 'undefined') {
 }
 
 export { doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot, collection, query, orderBy, getDocs, getDocFromServer };
-

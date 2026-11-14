@@ -14,6 +14,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useCommunity } from '../context/CommunityContext';
+import { SubpageTopBar } from '../components/SubpageTopBar';
 
 interface SponsorsPageProps {
   onBackToHome: () => void;
@@ -37,31 +38,11 @@ export const SponsorsPage: React.FC<SponsorsPageProps> = ({
   const activeSponsors = sponsors.filter((s) => s.isActive);
 
   return (
-    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] pt-24 pb-20">
+    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] subpage-top-offset pb-28 md:pb-20">
       
       {/* Top Breadcrumb Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-[#1e3a5f]/60 mb-6">
-          <button
-            type="button"
-            onClick={onBackToHome}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-[#d4af37] border border-white/10 hover:border-[#d4af37] text-slate-200 hover:text-[#060e1c] text-xs font-semibold transition-all shadow-sm cursor-pointer group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-1 transition-transform" />
-            <span>Voltar para o Início</span>
-          </button>
-
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span 
-              onClick={onBackToHome} 
-              className="hover:text-white cursor-pointer transition-colors"
-            >
-              Início
-            </span>
-            <span>/</span>
-            <span className="text-[#d4af37] font-medium">Apoiadores & Parceiros</span>
-          </div>
-        </div>
+        <SubpageTopBar currentLabel="Apoiadores & Parceiros" onBackToHome={onBackToHome} />
 
         {/* Hero Section */}
         <div className="relative rounded-3xl bg-gradient-to-br from-[#0a1b35] via-[#0d2242] to-[#071324] border border-[#d4af37]/30 p-8 sm:p-12 shadow-2xl overflow-hidden">
@@ -296,10 +277,10 @@ export const SponsorsPage: React.FC<SponsorsPageProps> = ({
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-center gap-3 w-full md:w-auto shrink-0">
             <a
               href="mailto:acedep@hotmail.com?subject=Interesse%20em%20Patroc%C3%ADnio%20-%20ACEDEP"
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-2 border border-white/15"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 border border-white/15"
             >
               <Mail className="w-4 h-4 text-[#d4af37]" />
               <span>acedep@hotmail.com</span>
@@ -309,7 +290,7 @@ export const SponsorsPage: React.FC<SponsorsPageProps> = ({
               href="https://wa.me/5511981047553?text=Ol%C3%A1%2C%20gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20como%20apoiar%20a%20ACEDEP."
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center gap-2 shadow"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow"
             >
               <Phone className="w-4 h-4" />
               <span>(11) 98104-7553</span>
@@ -319,7 +300,7 @@ export const SponsorsPage: React.FC<SponsorsPageProps> = ({
               href="https://wa.me/5511988231504?text=Ol%C3%A1%2C%20gostaria%20de%20informa%C3%A7%C3%B5es%20sobre%20como%20apoiar%20a%20ACEDEP."
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold transition-all flex items-center gap-2 shadow"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-emerald-700/80 hover:bg-emerald-600 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow"
             >
               <Phone className="w-4 h-4" />
               <span>(11) 98823-1504</span>

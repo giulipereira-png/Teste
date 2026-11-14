@@ -83,14 +83,14 @@ export const PhotoGallery: React.FC = () => {
 
         {/* Filter Categories */}
         {categories.length > 1 && (
-          <div className="flex flex-wrap gap-2 mb-8 items-center">
+          <div className="flex items-center gap-2 mb-8 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap touch-scroll-x">
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                className={`min-h-[40px] px-4 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                   selectedCategory === cat
-                    ? 'bg-[#d4af37] text-[#060e1c] font-bold shadow-md shadow-[#d4af37]/20 scale-105'
+                    ? 'bg-[#d4af37] text-[#060e1c] font-bold shadow-md shadow-[#d4af37]/20'
                     : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
                 }`}
               >
@@ -167,19 +167,20 @@ export const PhotoGallery: React.FC = () => {
         {/* Lightbox Modal */}
         {lightboxIndex !== null && filteredPhotos[lightboxIndex] && (
           <div
-            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 sm:p-6"
+            className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-6"
             onClick={closeLightbox}
           >
             {/* Close Button */}
             <button
               onClick={closeLightbox}
-              className="absolute top-4 right-4 p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer z-50"
+              className="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/15 hover:bg-white/25 text-white transition-colors cursor-pointer z-50"
               title="Fechar (Esc)"
+              aria-label="Fechar foto"
             >
               <X className="w-6 h-6" />
             </button>
 
-            {/* Prev Button */}
+            {/* Prev Button (Desktop) */}
             {filteredPhotos.length > 1 && (
               <button
                 onClick={prevPhoto}
@@ -190,7 +191,7 @@ export const PhotoGallery: React.FC = () => {
               </button>
             )}
 
-            {/* Next Button */}
+            {/* Next Button (Desktop) */}
             {filteredPhotos.length > 1 && (
               <button
                 onClick={nextPhoto}
@@ -203,29 +204,27 @@ export const PhotoGallery: React.FC = () => {
 
             {/* Modal Image Content */}
             <div
-              className="max-w-5xl w-full max-h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-[#0a192f] border border-[#d4af37]/40 shadow-2xl"
+              className="max-w-5xl w-full max-h-[92dvh] flex flex-col rounded-2xl overflow-hidden bg-[#0a192f] border border-[#d4af37]/40 shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Active Image */}
-              <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden max-h-[70vh]">
+              <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden max-h-[65dvh] sm:max-h-[70vh]">
                 <img
                   src={filteredPhotos[lightboxIndex].url}
                   alt={filteredPhotos[lightboxIndex].title}
-                  className="max-h-[70vh] w-full object-contain"
+                  className="max-h-[65dvh] sm:max-h-[70vh] w-full object-contain"
                 />
               </div>
 
-              {/* Bottom Details */}
+              {/* Bottom Details & Mobile Navigation */}
               <div className="p-4 sm:p-5 bg-[#0f2744] flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-white/10">
                 <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#d4af37]/20 text-[#f3e5ab] border border-[#d4af37]/30">
+                  <div className="flex items-center gap-2 mb-1 text-xs text-slate-400">
+                    <span className="font-semibold text-[#f3e5ab]">
                       {filteredPhotos[lightboxIndex].category}
                     </span>
                     {filteredPhotos[lightboxIndex].date && (
-                      <span className="text-xs text-slate-400">
-                        • {filteredPhotos[lightboxIndex].date}
-                      </span>
+                      <span>· {filteredPhotos[lightboxIndex].date}</span>
                     )}
                   </div>
                   <h4 className="text-base sm:text-lg font-bold text-white">
@@ -233,10 +232,31 @@ export const PhotoGallery: React.FC = () => {
                   </h4>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs text-slate-400">
+                <div className="flex items-center justify-between sm:justify-end gap-3 text-xs text-slate-300">
                   <span>
                     Foto {lightboxIndex + 1} de {filteredPhotos.length}
                   </span>
+
+                  {filteredPhotos.length > 1 && (
+                    <div className="flex sm:hidden items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={prevPhoto}
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white/10 active:bg-[#d4af37] active:text-[#060e1c] text-white border border-white/15 cursor-pointer"
+                        aria-label="Foto anterior"
+                      >
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={nextPhoto}
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-white/10 active:bg-[#d4af37] active:text-[#060e1c] text-white border border-white/15 cursor-pointer"
+                        aria-label="Próxima foto"
+                      >
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

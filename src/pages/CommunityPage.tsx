@@ -11,6 +11,7 @@ import {
   Waves
 } from 'lucide-react';
 import { CommunitySection } from '../components/CommunitySection';
+import { SubpageTopBar } from '../components/SubpageTopBar';
 
 interface CommunityPageProps {
   onBackToHome: () => void;
@@ -28,31 +29,11 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] pt-24 pb-20">
+    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] subpage-top-offset pb-28 md:pb-20">
       
       {/* Top Navigation & Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-[#1e3a5f]/60 mb-6">
-          <button
-            type="button"
-            onClick={onBackToHome}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-[#d4af37] border border-white/10 hover:border-[#d4af37] text-slate-200 hover:text-[#060e1c] text-xs font-semibold transition-all shadow-sm cursor-pointer group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-1 transition-transform" />
-            <span>Voltar para o Início</span>
-          </button>
-
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span 
-              onClick={onBackToHome} 
-              className="hover:text-white cursor-pointer transition-colors"
-            >
-              Início
-            </span>
-            <span>/</span>
-            <span className="text-[#d4af37] font-medium">Mural da Torcida & Notícias</span>
-          </div>
-        </div>
+        <SubpageTopBar currentLabel="Mural da Torcida & Notícias" onBackToHome={onBackToHome} />
 
         {/* Clean, Non-Bloated Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
@@ -88,13 +69,13 @@ export const CommunityPage: React.FC<CommunityPageProps> = ({
         <CommunitySection />
 
         {/* Back to Home bottom bar */}
-        <div className="mt-14 p-6 rounded-3xl bg-[#0a192f] border border-[#1e3a5f] flex items-center justify-between">
+        <div className="mt-12 sm:mt-14 p-6 rounded-3xl bg-[#0a192f] border border-[#1e3a5f] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <p className="text-xs sm:text-sm text-slate-300">
             Deseja retornar para a página principal?
           </p>
           <button
             onClick={onBackToHome}
-            className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer"
+            className="min-h-[44px] w-full sm:w-auto px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
           >
             Voltar ao Início
           </button>

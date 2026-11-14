@@ -116,14 +116,14 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
       <div className="relative w-full max-w-xl bg-[#0a192f] border-0 sm:border border-[#1e3a5f] rounded-none sm:rounded-2xl shadow-2xl overflow-hidden text-slate-100 h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col">
         
         {/* Header */}
-        <div className="p-4 sm:p-6 bg-[#060e1c] border-b border-white/10 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <Logo variant="emblem" className="h-8 sm:h-9" />
-            <div>
-              <h3 className="text-base sm:text-lg font-bold text-white font-serif">
+        <div className="p-4 pt-[max(1rem,env(safe-area-inset-top))] sm:p-6 bg-[#060e1c] border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <Logo variant="emblem" className="h-8 sm:h-9 shrink-0" />
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-bold text-white font-serif truncate">
                 Fale com a ACEDEP
               </h3>
-              <p className="text-[11px] sm:text-xs text-[#d4af37]">
+              <p className="text-[11px] sm:text-xs text-[#d4af37] truncate">
                 Atendimento Institucional e Paradesportivo
               </p>
             </div>
@@ -131,7 +131,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({ isOpen, onClose }) =
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             aria-label="Fechar janela"
           >
             <X className="w-5 h-5" />

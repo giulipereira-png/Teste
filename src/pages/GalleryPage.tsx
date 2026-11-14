@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { PhotoGallery } from '../components/PhotoGallery';
 import { usePhotos } from '../context/PhotosContext';
+import { SubpageTopBar } from '../components/SubpageTopBar';
 
 interface GalleryPageProps {
   onBackToHome: () => void;
@@ -30,31 +31,11 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] pt-24 pb-20">
+    <div className="min-h-screen bg-[#060e1c] text-slate-100 selection:bg-[#d4af37] selection:text-[#060e1c] subpage-top-offset pb-28 md:pb-20">
       
       {/* Top Breadcrumb & Navigation */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-b border-[#1e3a5f]/60 mb-6">
-          <button
-            type="button"
-            onClick={onBackToHome}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-[#d4af37] border border-white/10 hover:border-[#d4af37] text-slate-200 hover:text-[#060e1c] text-xs font-semibold transition-all shadow-sm cursor-pointer group"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 transform group-hover:-translate-x-1 transition-transform" />
-            <span>Voltar para o Início</span>
-          </button>
-
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span 
-              onClick={onBackToHome} 
-              className="hover:text-white cursor-pointer transition-colors"
-            >
-              Início
-            </span>
-            <span>/</span>
-            <span className="text-[#d4af37] font-medium">Galeria de Fotos Oficial</span>
-          </div>
-        </div>
+        <SubpageTopBar currentLabel="Galeria de Fotos Oficial" onBackToHome={onBackToHome} />
 
         {/* Clean, Non-Bloated Title */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2">
@@ -99,7 +80,7 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({
         <PhotoGallery />
 
         {/* Bottom Banner */}
-        <div className="mt-16 p-8 rounded-3xl bg-[#0a192f] border border-[#1e3a5f] flex flex-col sm:flex-row items-center justify-between gap-6">
+        <div className="mt-12 sm:mt-16 p-6 sm:p-8 rounded-3xl bg-[#0a192f] border border-[#1e3a5f] flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
             <h4 className="text-lg font-bold text-white font-serif">
               Conheça os nadadores e a comissão técnica da ACEDEP
@@ -109,11 +90,11 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0 w-full sm:w-auto">
             {onNavigateToPage && (
               <button
                 onClick={() => onNavigateToPage('equipe')}
-                className="px-4 py-2.5 rounded-xl bg-[#0f284a] hover:bg-[#d4af37] text-[#f3e5ab] hover:text-[#060e1c] border border-[#d4af37]/40 text-xs font-bold transition-all cursor-pointer"
+                className="min-h-[44px] px-4 py-2.5 rounded-xl bg-[#0f284a] hover:bg-[#d4af37] text-[#f3e5ab] hover:text-[#060e1c] border border-[#d4af37]/40 text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
               >
                 Conhecer a Equipe
               </button>
@@ -121,7 +102,7 @@ export const GalleryPage: React.FC<GalleryPageProps> = ({
 
             <button
               onClick={onBackToHome}
-              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer"
+              className="min-h-[44px] px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all cursor-pointer flex items-center justify-center"
             >
               Voltar ao Início
             </button>

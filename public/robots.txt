@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /painel
+Disallow: /gestao
+
+Sitemap: https://acedep.org.br/sitemap.xml
